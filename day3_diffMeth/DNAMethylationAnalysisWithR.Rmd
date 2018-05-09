@@ -1,0 +1,88 @@
+---
+title: "DNA methylation analysis with R"
+author: "Altuna Akalin"
+date: "May 8, 2018"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## DNA methylation analysis overview
+
+Cytosine methylation (5-methylcytosine, 5mC) is one of the main covalent base modifications in eukaryotic genomes, generally observed on CpG dinucleotides. The non-CpG methylation has been mainly observed in human embryonic stem and neuronal cells (Lister et al., 2009) (Lister et al., 2013). DNA methylation is a part of the epigenetic regulation mechanism of gene expression. It is cell-type specific DNA modification. It is reversible but mostly remains stable through cell division.  There are roughly 28 million CpGs in the human genome, 60–80% are generally methylated. Less than 10% of CpGs occur in CG-dense regions that are termed CpG islands in the human genome (Smith and Meissner, 2013). It has been demonstrated that DNA methylation is also not uniformly distributed over the genome, but rather is associated with CpG density. In vertebrate genomes, cytosine bases are usually unmethylated in CpG-rich regions such as CpG islands and tend to be methylated in CpG-deficient regions. Vertebrate genomes are largely CpG deficient except at CpG islands. Conversely, invertebrates such as Drosophila melanogaster and Caenorhabditis elegans do not exhibit cytosine methylation and consequently do not have CpG rich and poor regions but rather a steady CpG frequency over the genome (Deaton and Bird, 2011). 
+
+DNA methylation is established by DNA methyltransferases DNMT3A and DNMT3 B in combination with DNMT3L and maintained through/after cell division by the methyltransferase DNMT1 and associated proteins. DNMT3a and DNMT3b are in charge of the de novo methylation during early development. Loss of 5mC can be achieved passively by dilution during replication or exclusion of DNMT1 from the nucleus. Recent discoveries of ten-eleven translocation (TET) family of proteins and their ability to convert 5-methylcytosine (5mC) into 5-hydroxymethylcytosine (5hmC) in vertebrates provide a path for catalysed active DNA demethylation (Tahiliani et al., 2009). Iterative oxidations of 5hmC catalysed by TET result in 5-formylcytosine (5fC) and 5-carboxylcytosine (5caC). 5caC mark is excised from DNA by G/T mismatch-specific thymine-DNA glycosylase (TDG), which as a result returns cytosine residue back to its unmodified state (He et al., 2011). Apart from these, mainly bacteria but possibly higher eukaryotes contain base modifications on bases other than cytosine, such as methylated adenine or guanine (Clark et al., 2011).
+
+One of the most reliable and popular ways to measure DNA methylation is high-throughput bisulfite sequencing. This method, and related ones, allow measurement of DNA methylation at the single nucleotide resolution. The bisulfite conversions turns unmethylated Cs to Ts and methylated Cs remain intact. Then, the only thing to do is to align the reads with those C->T conversions and count C->T mutations to calculate fraction of methylated bases. In the end, we can get quantitative genome-wide measurements for DNA methylation. For the remainder of this chapter, we will show how to do DNA methylation analysis using R. The analysis process can be chunked to four main parts with further sub-chunks:
+
+1. Processing raw data
+  - Quality check
+  - Alignment and post-alingment processing
+  - Methylation calling
+  - Filtering bases
+2. Exploratory analysis
+  - Clustering
+  - PCA
+3. Defining regions of interest (ROI)
+  - Differential methylation
+  - Methylation segmentation 
+4. Annotating ROI
+  - Nearest genes
+  - Annotation with other genomic features
+  - Integration with other quantitative genomics data
+
+## Processing raw data and getting data into R
+The rawest form of data that most users get is probably in the form of 
+fastq files obtained from sequencing experiments. We will describe necessary steps and the tools that can be used for raw data processing and if exists we will mention their R equivalents. However, the data processing is usually done outside of the R 
+framework and for the following sections we will assume data processing is done and our analysis is starting from methylation call files.
+
+Typical data processing step starts with data quality check. The fastq files are first ran through a quality check software that shows the quality of the sequencing run. We would typically use [fastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for this. However, there are several bioconductor packages that could be of use, such as [Rqc](https://bioconductor.org/packages/release/bioc/html/Rqc.html) and [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html). Following the quality check if everything checks, the reads can be aligned to the genome. Before alignment adapters or low quality 
+are aligned to the genome can be trimmed to increase number of alignments. We would use adapter trimming tools such as cutadapt or flexbar for this purpose. Following this, reads are aligned to the genome with a bisulfite treatment aware aligner. For our own purposes, we use [Bismark](), however there are other equally accurate aligners, some are reviewed [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3378906/). In addition, Bioconductor package [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html) can align BS-seq reads within the R framework.
+
+After alignment, we need to call C->T conversions and calculate fraction/percentage of methylation. Most of the time aligners come with auxilary tools that calculate per base methylation values. Normally, they output a tabular format containing the location of the Cs and methylation value and strand. Within R, [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html) and [methylKit](https://bioconductor.org/packages/release/bioc/html/methylKit.html) can call methylation values from BAM files albeit with some limitations. In essenence, these methylation call files can be easily read into R and downstream analysis within R starts from that point.
+
+## Exploratory analysis and filtering
+We assume that we start the analysis in R with methylation call files.
+We will use methylKit package for the bulk of the analysis. 
+- PCA
+- Clustering
+
+## Defining regions of interest
+We are looking for regions that are different than the rest of the methylome or different from a reference methylome. These regions are
+usually mark important genomic features that are needed for cell type
+
+### Differential methylation
+Once methylation proportions per base are obtained, generally, the dynamics of methylation profiles are considered next. When there are multiple sample groups, it is usually of interest to locate bases or regions with different methylation proportions across samples. The bases or regions with different methylation proportions across samples are called differentially methylated CpG sites (DMCs) and differentially methylated regions (DMRs). They have been shown to play a role in many different diseases due to their association with epigenetic control of gene regulation. In addition, DNA methylation profiles can be highly tissue-specific due to their role in gene regulation (Schübeler, 2015). DNA methylation is highly informative when studying normal and diseased cells, because it can also act as a biomarker (Schübeler, 2015). For example, the presence of large-scale abnormally methylated genomic regions is a hallmark feature of many types of cancers (Ehrlich, 2002). Because of aforementioned reasons, investigating differential methylation is usually one of the primary goals of doing bisulfite sequencing.
+
+### Methylation segmentation
+The analysis of methylation dynamics is not exclusively restricted to differentially methylated regions across samples, apart from this there is also an interest in examining the methylation profiles within the same sample. Usually, depressions in methylation profiles pinpoint regulatory regions like gene promoters that co-localize with CG-dense CpG islands. On the other hand, many gene-body regions are extensively methylated and CpG-poor (Bock et al., 2012). These observations would describe a bimodal model of either hyper- or hypomethylated regions dependent on the local density of CpGs (Lövkvist et al., 2016). However, given the detection of CpG-poor regions with locally reduced levels of methylation (on average 30%) in pluripotent embryonic stem cells and in neuronal progenitors in both mouse and human, a different model seems also reasonable (Stadler et al., 2011). These low-methylated regions (LMRs) are located distal to promoters, have little overlap with CpG islands and associated with enhancer marks such as p300 binding sites and H3K27ac enrichment.
+
+
+## Annotation of ROI
+The regions of interest obtained through differential methylation or segmentation analysis often need to be integrated with genome annotation datasets. Without this type of integration, differential methylation or segmentation results will be hard to interpret in biological terms. The most common annotation task is to see where regions of interest land in relation to genes and gene parts and regulatory regions: Do they mostly occupy promoter, intronic or exonic regions? Do they overlap with repeats? Do they overlap with other epigenomic markers or long-range regulatory regions? These questions are not specific to methylation −nearly all regions of interest obtained via genome-wide studies have to deal with such questions. Thus, there are already multiple software tools that can produce such annotations. One is the Bioconductor package genomation (Akalin et al., 2015). It can be used to annotate DMRs/DMCs and it can also be used to integrate methylation proportions over the genome with other quantitative information and produce meta-gene plots or heatmaps. Another similar package is ChIPpeakAnno (Zhu et al., 2010), which is designed for ChIP-seq peak annotation but could also be used for DMR/DMC annotation to a certain degree.
+- find nearest genes
+- integrate with other quantitative data sets
+- annotate with other genomic features promoter/exon/intron/enhancers
+
+## Other R packages that can be used in methylation analysis
+
+## Exercises
+- get diff meth IDH vs NBM, download methylation call files
+- use chr1 and chr2 only. You can subset it after you download the files either in R. The files are for hg18 assembly of human genome.
+- what is the main effect
+- annotate DMCs promoter/intron/exon
+- which genes are the nearest
+```{r, eval=FALSE}
+library(methylKit)
+m=methRead("~/Downloads/GSM919982_NBM_1_myCpG.txt.gz",sample.id = "idh",assembly="hg18")
+```
+
+
+- do segmentation on hESC, you can only do chr1 if it takes too much time.
+- annotate segments
+- for each segment type plot -/+ 2kb around the mid-point of the segment average H3K4me3,H3K4me1, H3K27ac, p300 Chip-seq data sets avaiable at ENCODE and Roadmap Epigenome database.

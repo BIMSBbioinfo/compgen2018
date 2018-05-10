@@ -41,14 +41,12 @@ The rawest form of data that most users get is probably in the form of
 fastq files obtained from the sequencing experiments. We will describe necessary steps and the tools that can be used for raw data processing and if exists we will mention their R equivalents. However, the data processing is usually done outside of the R 
 framework and for the following sections we will assume that the data processing is done and our analysis is starting from methylation call files.
 
-Typical data processing step starts with data quality check. The fastq files are first ran through a quality check software that shows the quality of the sequencing run. We would typically use [fastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for this. However, there are several bioconductor packages that could be of use, such as [Rqc](https://bioconductor.org/packages/release/bioc/html/Rqc.html) and [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html). Following the quality check if everything checks, the reads can be aligned to the genome. Before alignment adapters or low quality 
-are aligned to the genome can be trimmed to increase number of alignments. We would use adapter trimming tools such as cutadapt or flexbar for this purpose. Following this, reads are aligned to the genome with a bisulfite treatment aware aligner. For our own purposes, we use [Bismark](), however there are other equally accurate aligners, some are reviewed [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3378906/). In addition, Bioconductor package [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html) can align BS-seq reads within the R framework.
+Typical data processing step starts with data quality check. The fastq files are first ran through a quality check software that shows the quality of the sequencing run. We would typically use [fastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for this. However, there are several bioconductor packages that could be of use, such as [Rqc](https://bioconductor.org/packages/release/bioc/html/Rqc.html) and [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html). Following the quality check, provided everything is OK, the reads can be aligned to the genome. Before the alignment adapters or low quality ends of reads can be trimmed to increase number of alignments. Low quality ends mostly likely have poor basecalls which will lead to many mismatches. Reads with non-trimmed adapters will also not align to the genome. We would use adapter trimming tools such as [cutadapt]() or [flexbar]() for this purpose, although there are a bunch of them to be chosen from. Following this, reads are aligned to the genome with a bisulfite treatment aware aligner. For our own purposes, we use [Bismark](), however there are other equally accurate aligners, some are reviewed [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3378906/). In addition, Bioconductor package [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html) can align BS-seq reads within the R framework.
 
-After alignment, we need to call C->T conversions and calculate fraction/percentage of methylation. Most of the time aligners come with auxilary tools that calculate per base methylation values. Normally, they output a tabular format containing the location of the Cs and methylation value and strand. Within R, [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html) and [methylKit](https://bioconductor.org/packages/release/bioc/html/methylKit.html) can call methylation values from BAM files albeit with some limitations. In essensence, these methylation call files can be easily read into R and downstream analysis within R starts from that point.
+After alignment, we need to call C->T conversions and calculate fraction/percentage of methylation. Most of the time aligners come with auxilary tools that calculate per base methylation values. Normally, they output a tabular format containing the location of the Cs and methylation value and strand. Within R, [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html) and [methylKit](https://bioconductor.org/packages/release/bioc/html/methylKit.html) can call methylation values from BAM files albeit with some limitations. In essensence, these methylation call files can be easily read into R and downstream analysis within R starts from that point. An important quality measure at this stage is to look at conversion rate. This simply means how many unmethylated Cs are converted to Ts. Since we expect, non-CpG methylation to be rare. We can simply count number of C->T conversions in non-CpG context and calculate conversion rate. The best way to do this would be via spike-in sequences where we expect no methylation at all. Since, non-CpG methylation is tissue specific, calculating conversion rate using non-CpG Cs might be misleading in some cases.
 
-## Exploratory analysis and filtering
-We assume that we start the analysis in R with the methylation call files. We will read those files in and do explaratory analysis, we will
-show how to filter bases or regions from the data and in what circumstances we might need to do so. We will use [methylKit](https://bioconductor.org/packages/release/bioc/html/methylKit.html) package for the bulk of the analysis. 
+## Data filtering and exploratory analysis
+We assume that we start the analysis in R with the methylation call files. We will read those files in and carry out explaratory analysis, we will show how to filter bases or regions from the data and in what circumstances we might need to do so. We will use [methylKit](https://bioconductor.org/packages/release/bioc/html/methylKit.html) package for the bulk of the analysis. 
 
 ### Reading methylation call files
 A typical methylation call file looks like this:
@@ -60,16 +58,7 @@ tab
 ```
 
 
-Most of the time bisulfite sequencing experiments have test and control 
-samples. The test samples can be from a disease tissue while the control 
-samples can be from a healthy tissue. You can read a set of methylation call 
-files that have test/control conditions giving `treatment` vector option. For 
-sake of subsequent analysis, file.list, sample.id and treatment option should 
-have the same order. In the following example, first two files have the 
-sample ids "test1" and "test2" and as determined by treatment vector they 
-belong to the same group. The third and fourth files have sample ids "ctrl1" 
-and "ctrl2" and they belong to the same group as indicated by the treatment 
-vector.
+Most of the time bisulfite sequencing experiments have test and control  samples. The test samples can be from a disease tissue while the control  samples can be from a healthy tissue. You can read a set of methylation call files that have test/control conditions giving `treatment` vector option. For sake of subsequent analysis, file.list, sample.id and treatment option should have the same order. In the following example, first two files have the sample ids "test1" and "test2" and as determined by treatment vector they belong to the same group. The third and fourth files have sample ids "ctrl1" and "ctrl2" and they belong to the same group as indicated by the treatment vector. We will first get a list of file paths and have a look at the content.
 
 
 ```{r,message=FALSE}
@@ -83,7 +72,11 @@ file.list=list( system.file("extdata",
                 system.file("extdata", 
                             "control2.myCpG.txt", package = "methylKit") )
 
+file.list
+```
 
+As you can see `file.list` variable is a simple list of file paths. Each file contains methylation calls for a given sample. Now, we can read the files with `methRead()` function.
+```{r read files}
 # read the files to a methylRawList object: myobj
 myobj=methRead(file.list,
            sample.id=list("test1","test2","ctrl1","ctrl2"),
@@ -93,14 +86,62 @@ myobj=methRead(file.list,
            )
 ```
 
-In addition to the options we mentioned above,
-any tab separated text file with a generic format can be read in using 
-methylKit, 
+tab-seperated bedgraph like formats from Bismark methylation caller can also be read in by methylkit. In those cases, we have to provide either `pipeline="bismarkCoverage"`  or `pipeline="bismarkCytosineReport"` to `methRead` function. In addition to the options we mentioned above,
+any tab separated text file with a generic format can be read in using methylKit, 
 such as methylation ratio files from [BSMAP](http://code.google.com/p/bsmap/).
 See [here](http://zvfak.blogspot.com/2012/10/how-to-read-bsmap-methylation-ratio.html) for an example.
 
+Before, we move on let us have a look at what kind of information is stored in `myobj`. This is technically a `methylRawList` object, which is essentially a list of `methylRaw` objects. These objects hold
+the information for location of Cs, and methylated Cs and unmethylated Cs.
+```{r}
+## inside the methylRawList object
+```
+
+### Further quality check
+It is always a good idea to check how the data looks like before proceeding further. For example, the methylation values should have bimodal distribution generally. This can be checked via 
+`getMethylationStats` function.
+```{r methStats}
+```
+In addition, we might want to see coverage values. By default, methylkit handles bases with at least 10X coverage by that can be changed. The bases with unsually high coverage is usually alarming. It might indicate a PCR bias issue in the experimental procedure. The general coverage statistics can be checked with 
+`getCoverageStats` function. 
+
+```{r coverageStats}
+```
+
+It might be useful to filter samples based on coverage. Particularly, if our samples are suffering from PCR bias it would be useful to discard bases with very high read coverage. Furthermore, we would also like to discard bases that have low read coverage, a high enough read coverage will increase the power of the statistical tests. The code below filters a `methylRawList` and discards bases that have coverage below 10X and also discards the bases that have more than 99.9th percentile of coverage in each sample.
+
+```{r }
+filtered.myobj=filterByCoverage(myobj,lo.count=10,lo.perc=NULL,
+                                      hi.count=NULL,hi.perc=99.9)
+```
+
 ### Filtering CpGs
-We might need to filter the CpGs for explaratory analysis or even for downstream analysis. For explaratory analysis
+We might need to filter the CpGs further before explaratory analysis or even befor the downstream analysis such as differential methylation . For explaratory analysis, it is of general interest to see how samples relate to each other and we might want to remove CpGs that are not variable before doing that. Or we might remove Cs that are potentially C->T mutations. First, we show how to
+filter based on variation.
+
+When we first read the files, each file is stored as its own entity. If we want compare samples in any way, we need to make a unified data structure that contains CpGs that are covered in most samples. The `unite` function creates a new object using the CpGs covered in each sample. This means 
+```{r}
+meth=unite(myobj, destrand=FALSE)
+```
+
+Let us take a look at the data content of methylBase object:
+
+```{r}
+head(meth)
+```
+
+By default, `unite` function produces bases/regions covered in all samples. That requirement can be relaxed using "min.per.group" option in `unite` function.
+
+```{r,eval=FALSE}
+# creates a methylBase object, 
+# where only CpGs covered with at least 1 sample per group will be returned
+
+# there were two groups defined by the treatment vector, 
+# given during the creation of myobj: treatment=c(1,1,0,0)
+meth.min=unite(myobj,min.per.group=1L)
+```
+
+
 
 ### Clustering samples
 
@@ -108,7 +149,7 @@ We might need to filter the CpGs for explaratory analysis or even for downstream
 
 
 ## Defining regions of interest
-When analyzing DNA methylation data, we usually look for regions that are different than the rest of the methylome or different from a reference methylome. These regions are so called "regions of interest".
+When analyzing DNA methylation data, we usually look for regions that are different than the rest of the methylome or different from a reference methylome. These regions are so called "regions of interest". 
 They usually mark important genomic features that are related to gene regulation which in turn defines the cell type. Therefore, it is a general interst to find such regions and work on them further to understand our biological sample or to answer specific research questions.
 
 ### Differential methylation
@@ -128,7 +169,7 @@ The regions of interest obtained through differential methylation or segmentatio
 
 ## Exercises
 - get diff meth IDH vs NBM, download methylation call files
-- use chr1 and chr2 only. You can subset it after you download the files either in R. The files are for hg18 assembly of human genome.
+- use chr1 and chr2 only. You can subset it after you download the files either in R or unix. The files are for hg18 assembly of human genome.
 - what is the main effect
 - annotate DMCs promoter/intron/exon
 - which genes are the nearest
@@ -138,6 +179,6 @@ m=methRead("~/Downloads/GSM919982_NBM_1_myCpG.txt.gz",sample.id = "idh",assembly
 ```
 
 
-- do segmentation on hESC, you can only do chr1 if it takes too much time.
+- do segmentation on hESC methylome from roadmap, you can only do chr1 if it takes too much time.
 - annotate segments
 - for each segment type plot -/+ 2kb around the mid-point of the segment average H3K4me3,H3K4me1, H3K27ac, p300 Chip-seq data sets avaiable at ENCODE and Roadmap Epigenome database.

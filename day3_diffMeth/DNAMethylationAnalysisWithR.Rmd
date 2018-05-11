@@ -115,10 +115,8 @@ filtered.myobj=filterByCoverage(myobj,lo.count=10,lo.perc=NULL,
                                       hi.count=NULL,hi.perc=99.9)
 ```
 
-### Filtering CpGs
-We might need to filter the CpGs further before explaratory analysis or even befor the downstream analysis such as differential methylation . For explaratory analysis, it is of general interest to see how samples relate to each other and we might want to remove CpGs that are not variable before doing that. Or we might remove Cs that are potentially C->T mutations. First, we show how to
-filter based on variation.
 
+### Merging samples into a single table
 When we first read the files, each file is stored as its own entity. If we want compare samples in any way, we need to make a unified data structure that contains CpGs that are covered in most samples. The `unite` function creates a new object using the CpGs covered in each sample. This means 
 ```{r}
 meth=unite(myobj, destrand=FALSE)
@@ -141,12 +139,43 @@ By default, `unite` function produces bases/regions covered in all samples. That
 meth.min=unite(myobj,min.per.group=1L)
 ```
 
+### Filtering CpGs
+We might need to filter the CpGs further before explaratory analysis or even befor the downstream analysis such as differential methylation . For explaratory analysis, it is of general interest to see how samples relate to each other and we might want to remove CpGs that are not variable before doing that. Or we might remove Cs that are potentially C->T mutations. First, we show how to
+filter based on variation.
+```{r methVar}
+```
 
+Now, let's assume we know the locations of C->T mutations. These locations should be removed from the analysis as they do not represent
+bisulfite treatment associated conversions.
+```{r snps}
+
+```
 
 ### Clustering samples
+Clustering is used for grouping data points by their similarity. It is a general concept that can be achieved by many different algorithms. In the context of DNA methylation we are trying to find samples that are similar to eachother. For example, if we sequenced three heart samples and 4 liver samples, we would expect liver samples will be more similar to eachother than heart samples on the DNA methylation space. 
+
+The following function will cluster the samples and draw a dendrogram.
+It will use correlation distance which is 1-R, where R is the correlation coefficient between two pairs of samples. The cluster tree will be drawn use "ward" method. This specific variant uses a "bottom up" approach: each data point starts in its own cluster, and pairs of clusters are merged as one moves up the hierarchy. In this case, clusters are merged if the variance is minimized. 
+```{r}
+clusterSamples(meth, dist="correlation", method="ward", plot=TRUE)
+```
+
+Setting the `plot=FALSE` will return a dendrogram object which can be manipulated by users or fed in to other user functions that can work with dendrograms.
+
+```{r,message=FALSE}
+hc = clusterSamples(meth, dist="correlation", method="ward", plot=FALSE)
+```
 
 ### Principal component analysis 
+Principal component analysis (PCA) is a mathematical transformation of possibly(correlated) variables into a number of uncorrelated variables called principal components. The resulting components from this transformation is defined in such a way that the first principal component has the highest variance and accounts for as most of the variability in the data.
 
+For each principal component you can see which variables contribute
+most to that component. Depending on what you used to do PCA in R, you
+can use loadings() function. Loadings function gives a matrix that
+shows how each variable contribute to the principal components. You
+can do barplots for each principal component. That will visualize what
+contributes to which principal component.  You should do the barplots
+for absolute values in the loadings matrix.
 
 ## Defining regions of interest
 When analyzing DNA methylation data, we usually look for regions that are different than the rest of the methylome or different from a reference methylome. These regions are so called "regions of interest". 

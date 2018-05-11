@@ -222,17 +222,27 @@ The regions of interest obtained through differential methylation or segmentatio
 ## Other R packages that can be used in methylation analysis
 
 ## Exercises
-- get diff meth IDH vs NBM, download methylation call files
+
+### Exercise 1
+- get diff meth IDH vs NBM, download methylation call files from GEO
+
+samples     Link      
+-------     ------  
+IDH1_rep1    [link](https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919990&format=file&file=GSM919990%5FIDH%2Dmut%5F1%5FmyCpG%2Etxt%2Egz) 
+IDH1_rep2    [link](https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919991&format=file&file=GSM919991%5FIDH%5Fmut%5F2%5FmyCpG%2Etxt%2Egz) 
+NBM_rep1     [link](https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919982&format=file&file=GSM919982%5FNBM%5F1%5FmyCpG%2Etxt%2Egz)
+NBM_rep2     [link](https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919984&format=file&file=GSM919984%5FNBM%5F2%5FRep1%5FmyCpG%2Etxt%2Egz)
+
 - use chr1 and chr2 only. You can subset it after you download the files either in R or unix. The files are for hg18 assembly of human genome.
-- what is the main effect
-- annotate DMCs promoter/intron/exon
-- which genes are the nearest
+- what is the main effect ? 
+- annotate DMCs promoter/intron/exon ?
+- which genes are the nearest ? 
 ```{r, eval=FALSE}
 library(methylKit)
 m=methRead("~/Downloads/GSM919982_NBM_1_myCpG.txt.gz",sample.id = "idh",assembly="hg18")
 ```
 
-
+### Exercise 2
 - do segmentation on hESC methylome from roadmap, you can only do chr1 if it takes too much time.
 - annotate segments
 - for each segment type plot -/+ 2kb around the mid-point of the segment average H3K4me3,H3K4me1, H3K27ac, p300 Chip-seq data sets avaiable at ENCODE and Roadmap Epigenome database.

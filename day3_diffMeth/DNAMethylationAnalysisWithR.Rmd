@@ -243,6 +243,7 @@ m=methRead("~/Downloads/GSM919982_NBM_1_myCpG.txt.gz",sample.id = "idh",assembly
 ```
 
 ### Exercise 2
-- do segmentation on hESC methylome from roadmap, you can only do chr1 if it takes too much time.
-- annotate segments
+- download human embryonic stemcell methylation bigWig files from [Epigenomics Roadmap website](http://egg2.wustl.edu/roadmap/web_portal/processed_data.html#MethylData). It may take a while how to website is structured and which bigWig file
+- do segmentation on hESC methylome. you can only do chr1 if it takes too much time. 
+- annotate segments, what kind of genomic features each segment class overlaps with.
 - for each segment type plot -/+ 2kb around the mid-point of the segment average H3K4me3,H3K4me1, H3K27ac, p300 Chip-seq data sets avaiable at ENCODE and Roadmap Epigenome database.

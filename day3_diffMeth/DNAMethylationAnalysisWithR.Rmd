@@ -224,7 +224,9 @@ The regions of interest obtained through differential methylation or segmentatio
 ## Exercises
 
 ### Exercise 1
-- get diff meth IDH vs NBM, download methylation call files from GEO
+The main objective of this exercise is getting differential methylated cytosines between two groups of samples: IDH-mut (AML patients with IDH mutations) vs NBM (normal bone marrow samples).
+
+- Download methylation call files from GEO. These files are readable by methlKit using default `methRead` arguments. 
 
 samples     Link      
 -------     ------  
@@ -233,17 +235,22 @@ IDH1_rep2    [link](https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919991&for
 NBM_rep1     [link](https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919982&format=file&file=GSM919982%5FNBM%5F1%5FmyCpG%2Etxt%2Egz)
 NBM_rep2     [link](https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919984&format=file&file=GSM919984%5FNBM%5F2%5FRep1%5FmyCpG%2Etxt%2Egz)
 
-- These files are readable by methlKit using default `methRead` arguments. Use chr1 and chr2 only if you need to save time. You can subset it after you download the files either in R or unix. The files are for hg18 assembly of human genome.
+
+
+- Find differentially methylated cytosines. Use chr1 and chr2 only if you need to save time. You can subset it after you download the files either in R or unix. The files are for hg18 assembly of human genome.
 - Describe the differential methylation trend, what is the main effect ? 
 - Annotate differentially methylated cytosines (DMCs) promoter/intron/exon ?
-- which genes are the nearest to DMCs ? Can you do gene set analysis either in R or via web-based tools ?
+- Which genes are the nearest to DMCs ? Can you do gene set analysis either in R or via web-based tools ?
+
 ```{r, eval=FALSE}
 library(methylKit)
 m=methRead("~/Downloads/GSM919982_NBM_1_myCpG.txt.gz",sample.id = "idh",assembly="hg18")
 ```
 
 ### Exercise 2
-- Download hthe uman embryonic stem-cell methylation bigWig files from [Epigenomics Roadmap website](http://egg2.wustl.edu/roadmap/web_portal/processed_data.html#MethylData). It may take a while how to website is structured and which bigWig file to use, that is part of the exercise.
-- do segmentation on hESC methylome. you can only do chr1 if it takes too much time. 
-- annotate segments, what kind of genomic features each segment class overlaps with.
-- for each segment type plot -/+ 2kb around the mid-point of the segment average H3K4me3,H3K4me1, H3K27ac, p300 Chip-seq data sets avaiable at ENCODE and Roadmap Epigenome database.
+The main objective of this exercise is to learn how to do methylome segmentation and the downstream analysis for annotation and data integration.
+
+- Download the human embryonic stem-cell methylation bigWig files from [Epigenomics Roadmap website](http://egg2.wustl.edu/roadmap/web_portal/processed_data.html#MethylData). It may take a while to understand how the website is structured and which bigWig file to use. That is part of the exercise.
+- Do segmentation on hESC methylome. you can only do chr1 if it takes too much time. 
+- Annotate segments, what kind of genomic features each segment class overlaps with.
+- For each segment type plot -/+ 2kb around the mid-point of the segment average H3K4me3,H3K4me1, H3K27ac, p300 Chip-seq data sets avaiable at ENCODE and Roadmap Epigenome database.

@@ -175,7 +175,7 @@ nrow(sub.meth)
 Clustering is used for grouping data points by their similarity. It is a general concept that can be achieved by many different algorithms. In the context of DNA methylation we are trying to find samples that are similar to eachother. For example, if we sequenced three heart samples and 4 liver samples, we would expect liver samples will be more similar to eachother than heart samples on the DNA methylation space. 
 
 The following function will cluster the samples and draw a dendrogram.
-It will use correlation distance which is 1-R, where R is the correlation coefficient between two pairs of samples. The cluster tree will be drawn use "ward" method. This specific variant uses a "bottom up" approach: each data point starts in its own cluster, and pairs of clusters are merged as one moves up the hierarchy. In this case, clusters are merged if the variance is minimized. 
+It will use correlation distance which is $1-\rho$ , where $\rho$ is the correlation coefficient between two pairs of samples. The cluster tree will be drawn using the "ward" method. This specific variant uses a "bottom up" approach: each data point starts in its own cluster, and pairs of clusters are merged as one moves up the hierarchy. In Ward's method, two clusters are merged if the variance is minimized compared to other possible merges. 
 ```{r}
 clusterSamples(meth, dist="correlation", method="ward", plot=TRUE)
 ```

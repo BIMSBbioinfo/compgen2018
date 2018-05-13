@@ -14,11 +14,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## DNA methylation analysis overview
 
+### what is DNA methylation ?
 Cytosine methylation (5-methylcytosine, 5mC) is one of the main covalent base modifications in eukaryotic genomes, generally observed on CpG dinucleotides. The non-CpG methylation has been mainly observed in human embryonic stem and neuronal cells (Lister et al., 2009) (Lister et al., 2013). DNA methylation is a part of the epigenetic regulation mechanism of gene expression. It is cell-type specific DNA modification. It is reversible but mostly remains stable through cell division.  There are roughly 28 million CpGs in the human genome, 60–80% are generally methylated. Less than 10% of CpGs occur in CG-dense regions that are termed CpG islands in the human genome (Smith and Meissner, 2013). It has been demonstrated that DNA methylation is also not uniformly distributed over the genome, but rather is associated with CpG density. In vertebrate genomes, cytosine bases are usually unmethylated in CpG-rich regions such as CpG islands and tend to be methylated in CpG-deficient regions. Vertebrate genomes are largely CpG deficient except at CpG islands. Conversely, invertebrates such as Drosophila melanogaster and Caenorhabditis elegans do not exhibit cytosine methylation and consequently do not have CpG rich and poor regions but rather a steady CpG frequency over the genome (Deaton and Bird, 2011). 
 
-DNA methylation is established by DNA methyltransferases DNMT3A and DNMT3 B in combination with DNMT3L and maintained through/after cell division by the methyltransferase DNMT1 and associated proteins. DNMT3a and DNMT3b are in charge of the de novo methylation during early development. Loss of 5mC can be achieved passively by dilution during replication or exclusion of DNMT1 from the nucleus. Recent discoveries of ten-eleven translocation (TET) family of proteins and their ability to convert 5-methylcytosine (5mC) into 5-hydroxymethylcytosine (5hmC) in vertebrates provide a path for catalysed active DNA demethylation (Tahiliani et al., 2009). Iterative oxidations of 5hmC catalysed by TET result in 5-formylcytosine (5fC) and 5-carboxylcytosine (5caC). 5caC mark is excised from DNA by G/T mismatch-specific thymine-DNA glycosylase (TDG), which as a result returns cytosine residue back to its unmodified state (He et al., 2011). Apart from these, mainly bacteria but possibly higher eukaryotes contain base modifications on bases other than cytosine, such as methylated adenine or guanine (Clark et al., 2011).
+### How DNA methylation is set ?
+DNA methylation is established by DNA methyltransferases DNMT3A and DNMT3B in combination with DNMT3L and maintained through/after cell division by the methyltransferase DNMT1 and associated proteins. DNMT3a and DNMT3b are in charge of the de novo methylation during early development. Loss of 5mC can be achieved passively by dilution during replication or exclusion of DNMT1 from the nucleus. Recent discoveries of ten-eleven translocation (TET) family of proteins and their ability to convert 5-methylcytosine (5mC) into 5-hydroxymethylcytosine (5hmC) in vertebrates provide a path for catalysed active DNA demethylation (Tahiliani et al., 2009). Iterative oxidations of 5hmC catalysed by TET result in 5-formylcytosine (5fC) and 5-carboxylcytosine (5caC). 5caC mark is excised from DNA by G/T mismatch-specific thymine-DNA glycosylase (TDG), which as a result returns cytosine residue back to its unmodified state (He et al., 2011). Apart from these, mainly bacteria but possibly higher eukaryotes contain base modifications on bases other than cytosine, such as methylated adenine or guanine (Clark et al., 2011).
 
-One of the most reliable and popular ways to measure DNA methylation is high-throughput bisulfite sequencing. This method, and related ones, allow measurement of DNA methylation at the single nucleotide resolution. The bisulfite conversions turns unmethylated Cs to Ts and methylated Cs remain intact. Then, the only thing to do is to align the reads with those C->T conversions and count C->T mutations to calculate fraction of methylated bases. In the end, we can get quantitative genome-wide measurements for DNA methylation. For the remainder of this chapter, we will show how to do DNA methylation analysis using R. The analysis process can be chunked to four main parts with further sub-chunks:
+### How to measure DNA methylation with bisulfite-sequencing
+One of the most reliable and popular ways to measure DNA methylation is high-throughput bisulfite sequencing. This method, and related ones, allow measurement of DNA methylation at the single nucleotide resolution. The bisulfite conversions turns unmethylated Cs to Ts and methylated Cs remain intact. Then, the only thing to do is to align the reads with those C->T conversions and count C->T mutations to calculate fraction of methylated bases. In the end, we can get quantitative genome-wide measurements for DNA methylation. 
+
+## Analyzing DNA methylation data
+For the remainder of this chapter, we will show how to do DNA methylation analysis using R. The analysis process can be chunked to four main parts with further sub-chunks:
 
 1. Processing raw data
   - Quality check
@@ -37,9 +43,7 @@ One of the most reliable and popular ways to measure DNA methylation is high-thr
   - Integration with other quantitative genomics data
 
 ## Processing raw data and getting data into R
-The rawest form of data that most users get is probably in the form of 
-fastq files obtained from the sequencing experiments. We will describe necessary steps and the tools that can be used for raw data processing and if exists we will mention their R equivalents. However, the data processing is usually done outside of the R 
-framework and for the following sections we will assume that the data processing is done and our analysis is starting from methylation call files.
+The rawest form of data that most users get is probably in the form of fastq files obtained from the sequencing experiments. We will describe necessary steps and the tools that can be used for raw data processing and if exists we will mention their R equivalents. However, the data processing is usually done outside of the R framework and for the following sections we will assume that the data processing is done and our analysis is starting from methylation call files.
 
 Typical data processing step starts with data quality check. The fastq files are first ran through a quality check software that shows the quality of the sequencing run. We would typically use [fastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for this. However, there are several bioconductor packages that could be of use, such as [Rqc](https://bioconductor.org/packages/release/bioc/html/Rqc.html) and [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html). Following the quality check, provided everything is OK, the reads can be aligned to the genome. Before the alignment adapters or low quality ends of reads can be trimmed to increase number of alignments. Low quality ends mostly likely have poor basecalls which will lead to many mismatches. Reads with non-trimmed adapters will also not align to the genome. We would use adapter trimming tools such as [cutadapt]() or [flexbar]() for this purpose, although there are a bunch of them to be chosen from. Following this, reads are aligned to the genome with a bisulfite treatment aware aligner. For our own purposes, we use [Bismark](), however there are other equally accurate aligners, some are reviewed [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3378906/). In addition, Bioconductor package [QuasR](https://bioconductor.org/packages/release/bioc/html/QuasR.html) can align BS-seq reads within the R framework.
 
@@ -58,7 +62,7 @@ tab
 ```
 
 
-Most of the time bisulfite sequencing experiments have test and control  samples. The test samples can be from a disease tissue while the control  samples can be from a healthy tissue. You can read a set of methylation call files that have test/control conditions giving `treatment` vector option. For sake of subsequent analysis, file.list, sample.id and treatment option should have the same order. In the following example, first two files have the sample ids "test1" and "test2" and as determined by treatment vector they belong to the same group. The third and fourth files have sample ids "ctrl1" and "ctrl2" and they belong to the same group as indicated by the treatment vector. We will first get a list of file paths and have a look at the content.
+Most of the time bisulfite sequencing experiments have test and control  samples. The test samples can be from a disease tissue while the control  samples can be from a healthy tissue. You can read a set of methylation call files that have test/control conditions giving `treatment` vector option. The treatment vector defines the sample groups and it is very important for the differential methylation analysis. For sake of subsequent analysis, file.list, sample.id and treatment option should have the same order. In the following example, first two files have the sample ids "test1" and "test2" and as determined by treatment vector they belong to the same group. The third and fourth files have sample ids "ctrl1" and "ctrl2" and they belong to the same group as indicated by the treatment vector. We will first get a list of file paths and have a look at the content.
 
 
 ```{r,message=FALSE}
@@ -158,7 +162,7 @@ head(meth[mds>20,])
 Now, let's assume we know the locations of C->T mutations. These locations should be removed from the analysis as they do not represent
 bisulfite treatment associated conversions. Mutation locations are 
 stored in a `GRanges` object, and we can use that to remove CpGs 
-overlapping with mutations.
+overlapping with mutations. In order to do overlap operation, we will convert the methylKit object to a `GRanges` object and do the filtering with `%over%` function within `[ ]`. The returned object will still be a methylKit object.
 ```{r snps}
 library(GenomicRanges)
 mut=GRanges(seqnames=c("chr21","chr21"),
@@ -175,7 +179,7 @@ nrow(sub.meth)
 Clustering is used for grouping data points by their similarity. It is a general concept that can be achieved by many different algorithms. In the context of DNA methylation we are trying to find samples that are similar to eachother. For example, if we sequenced three heart samples and 4 liver samples, we would expect liver samples will be more similar to eachother than heart samples on the DNA methylation space. 
 
 The following function will cluster the samples and draw a dendrogram.
-It will use correlation distance which is $1-\rho$ , where $\rho$ is the correlation coefficient between two pairs of samples. The cluster tree will be drawn using the "ward" method. This specific variant uses a "bottom up" approach: each data point starts in its own cluster, and pairs of clusters are merged as one moves up the hierarchy. In Ward's method, two clusters are merged if the variance is minimized compared to other possible merges. 
+It will use correlation distance which is $1-\rho$ , where $\rho$ is the correlation coefficient between two pairs of samples. The cluster tree will be drawn using the "ward" method. This specific variant uses a "bottom up" approach: each data point starts in its own cluster, and pairs of clusters are merged as one moves up the hierarchy. In Ward's method, two clusters are merged if the variance is minimized compared to other possible merge operations. This bottom up approach helps build the dendrogram showing the relationship between clusters. 
 ```{r}
 clusterSamples(meth, dist="correlation", method="ward", plot=TRUE)
 ```
@@ -201,25 +205,137 @@ pc=PCASamples(meth,obj.return = TRUE, adj.lim=c(1,1))
 
 In this case, we also returned an object from the plotting function. this is the output of R `prcomp` function, which includes loadings and eigen vectors which might be useful. You can also do your own PCA analysis using `percMethylation` and `prcomp`. In the case above, the methylation matrix is transponsed. This allows us to compare distances between samples on the PCA scatterplot. 
 
-## Defining regions of interest
-When analyzing DNA methylation data, we usually look for regions that are different than the rest of the methylome or different from a reference methylome. These regions are so called "regions of interest". 
-They usually mark important genomic features that are related to gene regulation which in turn defines the cell type. Therefore, it is a general interest to find such regions and analyze them further to understand our biological sample or to answer specific research questions.
+## Extracting interesting regions: segmentation and differential methylation
+When analyzing DNA methylation data, we usually look for regions that are different than the rest of the methylome or different from a reference methylome. These regions are so called "interesting regions". They usually mark important genomic features that are related to gene regulation which in turn defines the cell type. Therefore, it is a general interest to find such regions and analyze them further to understand our biological sample or to answer specific research questions. Below we will describe two ways of defining "regions of interest".
 
 
 ### Differential methylation
-Once methylation proportions per base are obtained, generally, the dynamics of methylation profiles are considered next. When there are multiple sample groups, it is usually of interest to locate bases or regions with different methylation proportions across samples. The bases or regions with different methylation proportions across samples are called differentially methylated CpG sites (DMCs) and differentially methylated regions (DMRs). They have been shown to play a role in many different diseases due to their association with epigenetic control of gene regulation. In addition, DNA methylation profiles can be highly tissue-specific due to their role in gene regulation (Schübeler, 2015). DNA methylation is highly informative when studying normal and diseased cells, because it can also act as a biomarker (Schübeler, 2015). For example, the presence of large-scale abnormally methylated genomic regions is a hallmark feature of many types of cancers (Ehrlich, 2002). Because of aforementioned reasons, investigating differential methylation is usually one of the primary goals of doing bisulfite sequencing.
+Once methylation proportions per base are obtained, generally, the differences between methylation profiles are considered next. When there are multiple sample groups where each group defines a separate biological entity or treatment, it is usually of interest to locate bases or regions with different methylation proportions across the sample groups. The bases or regions with different methylation proportions across samples are called differentially methylated CpG sites (DMCs) and differentially methylated regions (DMRs). They have been shown to play a role in many different diseases due to their association with epigenetic control of gene regulation. In addition, DNA methylation profiles can be highly tissue-specific due to their role in gene regulation (Schübeler, 2015). DNA methylation is highly informative when studying normal and diseased cells, because it can also act as a biomarker. For example, the presence of large-scale abnormally methylated genomic regions is a hallmark feature of many types of cancers (Ehrlich, 2002). Because of aforementioned reasons, investigating differential methylation is usually one of the primary goals of doing bisulfite sequencing.
+
+#### Fisher's exact test
+Differential DNA methylation is usually calculated by comparing the proportion of methylated Cs in a test sample relative to a control. In simple comparisons between such pairs of samples (i.e. test and control), methods such as Fisher’s Exact Test cases. if there are replicates, replicates can be pooled within groups to a single sample per group. This strategy, however, does not take into account biological variability between replicates. We will now show how to compare pairs of samples via `calculateDiffMeth` function in `methylKit`. When there are only one sample per sample group, `calculateDiffMeth` automatically applies Fisher's exact test. We will not extract one sample from each group and run `calculateDiffMeth`, which will automatically run Fisher's exact test.
+```{r fishers,eval=FALSE}
+getSampleID(meth)
+new.meth=reorganize(meth,sample.ids=c("test1","ctrl1"),treatment=c(1,0))
+dmf=calculateDiffMeth(new.meth)
+```
+We can also pool the samples from the same group by adding up the number of Cs and Ts per group. This way even if we have replicated experiments we treat them as single experiments, and can apply Fisher's exact test. We will now pool the samples and apply
+```{r pool}
+pooled.meth=pool(meth,sample.ids=c("test","control"))
+dm.pooledf=calculateDiffMeth(pooled.meth)
+
+```
+
+`calculateDiffMeth` function returns the P-values for all bases or regions in the input methylBase object. We need to filter to get differentially methylated CpGs. This can be done via `getMethlyDiff` function or simple filtering via `[ ]` notation. Below we show how to filter the `methylDiff` object output by `calculateDiffMeth()` function in order to get differentially methylated CpGs. The function arguments defines cutoff values for  the methylation difference between groups and Q-value. In these cases, we require a methylation difference of 25% and Q-value of at least $0.01$.
+
+```{r filter}
+# get differentially methylated bases/regions with specific cutoffs
+all.diff=getMethylDiff(dm.pooledf,difference=25,qvalue=0.01,type="all")
+
+# get hyper-methylated
+hyper=getMethylDiff(dm.pooledf,difference=25,qvalue=0.01,type="hyper")
+
+# get hypo-methylated
+hypo=getMethylDiff(dm.pooledf,difference=25,qvalue=0.01,type="hypo")
+
+#using [ ] notation
+hyper2=dm.pooledf[dm.pooledf$qvalue < 0.01 & dm.pooledf$meth.diff > 25,]
+```
+
+#### Logistic regression based tests
+Regression-based methods are generally used to model methylation levels in relation to the sample groups and variation between replicates. Differences between currently available regression methods stem from the choice of distribution to model the data and the variation associated with it. In the simplest case, linear regression can be used to model methylation per given CpG or loci across sample groups. The model fits regression coefficients to model the expected methylation proportion values for each CpG site across sample groups. Hence, the null hypothesis of the model coefficients being zero could be tested using t-statistics. However, linear regression based methods might produce fitted methylation levels outside the range [0,1] unless the values are transformed before regression. An alternative is logistic regression, which can deal with data strictly bounded between 0 and 1 and with non-constant variance, such as methylation proportion/fraction values. In the logistic regression, it is assumed that fitted values have variation $np(1-p)$, where $p$ is the fitted methylation proportion for a given sample and n is the read coverage. If the observed variance is larger or smaller than assumed by the model, one speaks of under- or overdispersion. This over/under-dispersion can be corrected by calculating a scaling factor and using that factor to adjust the variance estimates as in $np(1-p)s$, where $s$ is the scaling factor. MethylKit can apply logistic regression to test the methylation difference with or without the overdispersion correction. In this case, Chi-square or F-test can be used to compare the difference in the deviances of the null model and the alternative model. The null model assumes there is no relationship between sample groups and methylation, and the alternative model assumes that there is a relationship where sample groups are predictive of methylation values for a given CpG or region for which the model is constructed. Next, we are going to use the logistic regression based model with over-dispersion correction and Chi-square test. 
+```{r logReg}
+dm.lr=calculateDiffMeth(meth,overdispersion = "MN",test ="Chisq")
+```
+
+#### Betabinomial distribution based tests
+More complex regression models use beta binomial distribution and are particularly useful for better modeling the variance. Similar to logistic regression, their observation follows binomial distribution (number of reads), but methylation proportion itself can vary across samples, according to a beta distribution. It can deal with fitting values in [0,1] range and performs better when there is greater variance than expected by the simple logistic model. In essence, these models have a different way of calculating a scaling factor when there is overdispersion in the model. Further enhancements are made to these models by using the Empirical Bayes methods that can better estimate hyperparameters of the beta distribution (variance-related parameters) by borrowing information between loci or regions within the genome to aid with inference about each individual loci or region. We are now going to use a beta-binomial based model called DSS (Feng et al., 2014) to calculate differential methylation.
+```{r dss}
+dm.dss=calculateDiffMethDSS(meth)
+```
+
+#### Differential methylation for regions rather than base-pairs
+Until now, we worked on differentially methylated cytosines. However,
+working with base-pair resolution data has its problems. Not all the CpGs will be covered in all samples, if covered they may have low coverage which reduces the power of the tests. Instead of base-pairs, we can choose to work with regions. So, it might be desirable to summarize methylation information over pre-defined regions rather than doing base-pair resolution analysis. `methylKit` provides functionality to do such analysis. We can either tile the whole genome to tiles with predefined length, or we can use pre-defined regions such as promoters or CpG islands. This kind of regional analysis is carried out by adding up C and T counts from each covered cytosine and returning a total C and T count for each region.
+
+
+The function below tiles the genome with windows 1000bp length and 1000bp step-size and summarizes the methylation information on those tiles. In this case, it returns a `methylRawList` object which can be fed into `unite` and `calculateDiffMeth` functions consecutively to get differentially methylated regions.
+```{r,warning=FALSE}
+tiles=tileMethylCounts(myobj,win.size=1000,step.size=1000)
+head(tiles[[1]],3)
+```
+
+In addition, if we are interested in particular regions, we can also get those regions as methylKit objects after summarizing the methylation information as described above. The code below summarizes the methylation information over a given set of promoter regions and outputs a `methylRaw` or `methylRawList` object depending on the input. We are using the output of 
+`genomation` functions used above to provide the locations of promoters. For regional summary  functions, we need to 
+provide regions of interest as GRanges object.
+
+```{r, eval=FALSE}
+library(genomation)
+
+# read the gene BED file
+gene.obj=readTranscriptFeatures(system.file("extdata", "refseq.hg18.bed.txt", 
+                                           package = "methylKit"))
+promoters=regionCounts(myobj,gene.obj$promoters)
+
+head(promoters[[1]])
+```
+
+In addition, it is possible to cluster DMCs based on their proximity and direction of differential methylation. This can be achieved by `methSeg` function in methylKit. We will see more about `methSeg` function in the following section.
+But it can take the output of `getMethylDiff` function therefore can work on DMCs to get differentially methylated regions.
+
+#### Adding covariates
+Covariates can be included in the analysis. The function will then try to 
+separate the influence of the covariates from the 
+treatment effect via the logistic regression model. In this case, we will test
+if full model (model with treatment and covariates) is better than the model with
+the covariates only. If there is no effect due to the treatment (sample groups),
+the full model will not explain the data better than the model with covariates
+only. In `calculateDiffMeth`, this is achieved by
+supplying the `covariates` argument in the format of a `data.frame`.
+Below, we simulate methylation data and add make a `data.frame` for the age.
+The data frame can include more columns, and those columns can also be 
+`factor` variables. The row order of the data.frame should match the order
+of samples in the `methylBase` object.
+
+```{r,eval=FALSE}
+
+covariates=data.frame(age=c(30,80,34,30,80,40))
+sim.methylBase<-dataSim(replicates=6,sites=1000,
+                        treatment=c(rep(1,3),rep(0,3)),
+                        covariates=covariates,
+                        sample.ids=c(paste0("test",1:3),paste0("ctrl",1:3))
+                        )
+my.diffMeth3<-calculateDiffMeth(sim.methylBase,
+                                covariates=covariates,
+                                overdispersion="MN",test="Chisq",mc.cores=1)
+```
 
 ### Methylation segmentation
-The analysis of methylation dynamics is not exclusively restricted to differentially methylated regions across samples, apart from this there is also an interest in examining the methylation profiles within the same sample. Usually, depressions in methylation profiles pinpoint regulatory regions like gene promoters that co-localize with CG-dense CpG islands. On the other hand, many gene-body regions are extensively methylated and CpG-poor (Bock et al., 2012). These observations would describe a bimodal model of either hyper- or hypomethylated regions dependent on the local density of CpGs (Lövkvist et al., 2016). However, given the detection of CpG-poor regions with locally reduced levels of methylation (on average 30%) in pluripotent embryonic stem cells and in neuronal progenitors in both mouse and human, a different model seems also reasonable (Stadler et al., 2011). These low-methylated regions (LMRs) are located distal to promoters, have little overlap with CpG islands and associated with enhancer marks such as p300 binding sites and H3K27ac enrichment.
+The analysis of methylation dynamics is not exclusively restricted to differentially methylated regions across samples, apart from this there is also an interest in examining the methylation profiles within the same sample. Usually, depressions in methylation profiles pinpoint regulatory regions like gene promoters that co-localize with CG-dense CpG islands. On the other hand, many gene-body regions are extensively methylated and CpG-poor (Bock et al., 2012). These observations would describe a bimodal model of either hyper- or hypomethylated regions dependent on the local density of CpGs (Lövkvist et al., 2016). However, given the detection of CpG-poor regions with locally reduced levels of methylation (on average 30%) in pluripotent embryonic stem cells and in neuronal progenitors in both mouse and human, a different model seems also reasonable (Stadler et al., 2011). These low-methylated regions (LMRs) are located distal to promoters, have little overlap with CpG islands and associated with enhancer marks such as p300 binding sites and H3K27ac enrichment. 
+
+Now we are going to try to segment portion for the H1 human embryonic stem cell line. MethylKit uses change-point analysis to segment the methylome in to similar 
+
+There are also other segmentation strategies based on change-point analysis, where change-points of a genome-wide signal are recorded and the genome is partitioned into regions between consecutive change points. This approach is typically used in the context of copy number variation detection (Klambauer et al., 2012), but can be applied to methylome segmentation as well.
+
+A package implementing this method of segmentation based on change points is methylKit. It identifies segments that are further clustered using a mixture modeling approach. This clustering is based on only the average methylation level of the segments and allows the detection of distinct methylome features comparable to UMRs, LMRs and FMRs. This approach provides a more robust approach to segmentation where one can decide on the number of segmentation classes after segmentation. Whereas in HMM-based methods, one must know, a priori, the number of segmentation classes or run multiple rounds of HMMs with different numbers and identify which model fits best to the data.
+```{r }
+# read methylation data
+mbw=readRDS("data/H1.chr21.chr22.rds")
+
+# segment the methylation data
+res=methSeg(mbw,diagnostic.plot=TRUE,maxInt=100,minSeg=10,G=1:4)
 
 
-## Annotation of ROI
+```
+## Annotation of DMRs/DMCs and segments
 The regions of interest obtained through differential methylation or segmentation analysis often need to be integrated with genome annotation datasets. Without this type of integration, differential methylation or segmentation results will be hard to interpret in biological terms. The most common annotation task is to see where regions of interest land in relation to genes and gene parts and regulatory regions: Do they mostly occupy promoter, intronic or exonic regions? Do they overlap with repeats? Do they overlap with other epigenomic markers or long-range regulatory regions? These questions are not specific to methylation −nearly all regions of interest obtained via genome-wide studies have to deal with such questions. Thus, there are already multiple software tools that can produce such annotations. One is the Bioconductor package genomation (Akalin et al., 2015). It can be used to annotate DMRs/DMCs and it can also be used to integrate methylation proportions over the genome with other quantitative information and produce meta-gene plots or heatmaps. Another similar package is ChIPpeakAnno (Zhu et al., 2010), which is designed for ChIP-seq peak annotation but could also be used for DMR/DMC annotation to a certain degree.
-- find nearest genes
-- integrate with other quantitative data sets
-- annotate with other genomic features promoter/exon/intron/enhancers
 
-## Other R packages that can be used in methylation analysis
+## Other R packages that can be used for methylation analysis
+- DSS
+- BSseq
+- BiSeq
+- MethylSeeker
+- QuasR
 
 ## Exercises
 
@@ -250,7 +366,7 @@ m=methRead("~/Downloads/GSM919982_NBM_1_myCpG.txt.gz",sample.id = "idh",assembly
 ### Exercise 2
 The main objective of this exercise is to learn how to do methylome segmentation and the downstream analysis for annotation and data integration.
 
-- Download the human embryonic stem-cell methylation bigWig files from [Epigenomics Roadmap website](http://egg2.wustl.edu/roadmap/web_portal/processed_data.html#MethylData). It may take a while to understand how the website is structured and which bigWig file to use. That is part of the exercise.
+- Download the human embryonic stem-cell methylation bigWig files from [Roadmap Epigenomics website](http://egg2.wustl.edu/roadmap/web_portal/processed_data.html#MethylData). It may take a while to understand how the website is structured and which bigWig file to use. That is part of the exercise.
 - Do segmentation on hESC methylome. you can only do chr1 if it takes too much time. 
 - Annotate segments, what kind of genomic features each segment class overlaps with.
-- For each segment type plot -/+ 2kb around the mid-point of the segment average H3K4me3,H3K4me1, H3K27ac, p300 Chip-seq data sets avaiable at ENCODE and Roadmap Epigenome database.
+- For each segment type, plot -/+ 2kb around the mid-point of the segment average H3K4me3, H3K4me1, H3K27ac, p300 Chip-seq data sets avaiable at ENCODE and Roadmap Epigenome database.

@@ -95,7 +95,7 @@ any tab separated text file with a generic format can be read in using methylKit
 such as methylation ratio files from [BSMAP](http://code.google.com/p/bsmap/).
 See [here](http://zvfak.blogspot.com/2012/10/how-to-read-bsmap-methylation-ratio.html) for an example.
 
-Before, we move on let us have a look at what kind of information is stored in `myobj`. This is technically a `methylRawList` object, which is essentially a list of `methylRaw` objects. These objects hold
+Before we move on, let us have a look at what kind of information is stored in `myobj`. This is technically a `methylRawList` object, which is essentially a list of `methylRaw` objects. These objects hold
 the information for location of Cs, and methylated Cs and unmethylated Cs.
 ```{r}
 ## inside the methylRawList object
@@ -269,7 +269,7 @@ In addition, if we are interested in particular regions, we can also get those r
 `genomation` functions used above to provide the locations of promoters. For regional summary  functions, we need to 
 provide regions of interest as GRanges object.
 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 library(genomation)
 
 # read the gene BED file
@@ -284,7 +284,7 @@ In addition, it is possible to cluster DMCs based on their proximity and directi
 But it can take the output of `getMethylDiff` function therefore can work on DMCs to get differentially methylated regions.
 
 #### Adding covariates
-Covariates can be included in the analysis. The function will then try to 
+Covariates can be included in the analysis as well in methylKit. The `calculateDiffMeth` function will then try to 
 separate the influence of the covariates from the 
 treatment effect via the logistic regression model. In this case, we will test
 if full model (model with treatment and covariates) is better than the model with
@@ -295,40 +295,100 @@ supplying the `covariates` argument in the format of a `data.frame`.
 Below, we simulate methylation data and add make a `data.frame` for the age.
 The data frame can include more columns, and those columns can also be 
 `factor` variables. The row order of the data.frame should match the order
-of samples in the `methylBase` object.
+of samples in the `methylBase` object. Below we are showing an example
+of this using a simulated data set where methylation values of CpGs will be affected by the age of the sample.
 
 ```{r,eval=FALSE}
 
 covariates=data.frame(age=c(30,80,34,30,80,40))
-sim.methylBase<-dataSim(replicates=6,sites=1000,
+sim.methylBase=dataSim(replicates=6,sites=1000,
                         treatment=c(rep(1,3),rep(0,3)),
                         covariates=covariates,
-                        sample.ids=c(paste0("test",1:3),paste0("ctrl",1:3))
-                        )
-my.diffMeth3<-calculateDiffMeth(sim.methylBase,
-                                covariates=covariates,
-                                overdispersion="MN",test="Chisq",mc.cores=1)
+                        sample.ids=c(paste0("test",1:3),paste0("ctrl",1:3)))
+
+my.diffMeth3=calculateDiffMeth(sim.methylBase,
+                               covariates=covariates,
+                               overdispersion="MN",
+                               test="Chisq",mc.cores=1)
+
+                        
 ```
 
 ### Methylation segmentation
 The analysis of methylation dynamics is not exclusively restricted to differentially methylated regions across samples, apart from this there is also an interest in examining the methylation profiles within the same sample. Usually, depressions in methylation profiles pinpoint regulatory regions like gene promoters that co-localize with CG-dense CpG islands. On the other hand, many gene-body regions are extensively methylated and CpG-poor (Bock et al., 2012). These observations would describe a bimodal model of either hyper- or hypomethylated regions dependent on the local density of CpGs (Lövkvist et al., 2016). However, given the detection of CpG-poor regions with locally reduced levels of methylation (on average 30%) in pluripotent embryonic stem cells and in neuronal progenitors in both mouse and human, a different model seems also reasonable (Stadler et al., 2011). These low-methylated regions (LMRs) are located distal to promoters, have little overlap with CpG islands and associated with enhancer marks such as p300 binding sites and H3K27ac enrichment. 
 
-Now we are going to try to segment portion for the H1 human embryonic stem cell line. MethylKit uses change-point analysis to segment the methylome in to similar 
-
-There are also other segmentation strategies based on change-point analysis, where change-points of a genome-wide signal are recorded and the genome is partitioned into regions between consecutive change points. This approach is typically used in the context of copy number variation detection (Klambauer et al., 2012), but can be applied to methylome segmentation as well.
-
-A package implementing this method of segmentation based on change points is methylKit. It identifies segments that are further clustered using a mixture modeling approach. This clustering is based on only the average methylation level of the segments and allows the detection of distinct methylome features comparable to UMRs, LMRs and FMRs. This approach provides a more robust approach to segmentation where one can decide on the number of segmentation classes after segmentation. Whereas in HMM-based methods, one must know, a priori, the number of segmentation classes or run multiple rounds of HMMs with different numbers and identify which model fits best to the data.
+Now we are going to try to segment portion for the H1 human embryonic stem cell line. MethylKit uses change-point analysis to segment the methylome. In change-point analysis, the change-points of a genome-wide methylation signal are recorded and the genome is partitioned into regions between consecutive change points. CpGs in each segment is similar to eachoter more than the following segment. 
+After segmentation, methylKit function `methSeg` identifies segments that are further clustered into segment classes using a mixture modeling approach. This clustering is based on only the average methylation level of the segments and allows the detection of distinct methylome features comparable to unmethylated regions (UMRs), lowly methylated regions (LMRs) and fully methylated regions (FMRs) mentioned at Stadler et. al (2012). The code snippet below read the methylation data from H1 cell line as a `GRanges` object, and runs the segmentation with potentially up to classes of segments. Mixture modelling determines the optimal number of segments using a statistic called bayesian information criterion (BIC). We have set the number of segment classes to try using `G=1:4` argument.
 ```{r }
 # read methylation data
 mbw=readRDS("data/H1.chr21.chr22.rds")
 
 # segment the methylation data
-res=methSeg(mbw,diagnostic.plot=TRUE,maxInt=100,minSeg=10,G=1:4)
-
+res=methSeg(mbw,diagnostic.plot=FALSE,maxInt=100,minSeg=10,G=1:4,
+            join.neighbours = TRUE)
 
 ```
+
+In this case, we know that BIC criterion does not improve much after 4 segment classes. Not, we will not have a look at the carachteristics of the segment classes. We are going to plot mean methylation value and the length of the segment as a scatter plot.
+```{r segplot}
+# plot 
+plot(res$seg.mean,
+     log10(width(res)),pch=20,
+     col=scales::alpha(rainbow(4)[as.numeric(res$seg.group)], 0.2),
+     ylab="log10(length)",
+     xlab="methylation proportion")
+
+```
+
+The highly methylated segment classes that have more than 70% methylation are usually longer, median length is 17889 bp. The segment class that has the lowest methylation values have median length of 1376 bp and the shortest segment class has low to medium methylation level, has median legth of 412 bp.
+
+
+### Working with large files 
+We might want to perform differential methylation analysis in R using whole genome methylation data of multiple samples. The problem is that for genome-wide experiments, file sizes can easily range from hundreds of megabytes to gigabytes and processing multiple instances of those files in memory (RAM) might become infeasible unless we have access to a high performance cluster (HPC) with extensive RAM. If we want to use a desktop computer or laptop with limited RAM, we either need to restrict our analysis to a subset of the data or use packages that can handle this situation. 
+
+The methylKit package provides the capability of dealing large files and high number of samples by exploiting flat file databases to substitute in-memory objects. The internal data apart from meta information has a tabular structure storing chromosome, start/end position, strand information of the associated CpG base just like many other biological formats like BED, GFF or SAM. By exporting this tabular data into a TAB-delimited file and making sure it is accordingly position-sorted it can be indexed using the generic [tabix tool](http://www.htslib.org/doc/tabix.html). In general tabix indexing is a generalization of BAM indexing for generic TAB-delimited files. It inherits all the advantages of BAM indexing, including data compression and efficient random access in terms of few seek function calls per query.” (Li, 2011). MethylKit relies on [Rsamtools] (http://bioconductor.org/packages/release/bioc/html/Rsamtools.html) which implements tabix functionality for R and this way internal methylKit objects can be efficiently stored as compressed file on the disk and still be fast accessed. Another advantage is that existing compressed files can be loaded in interactive sessions, allowing the backup and transfer of intermediate analysis results.
+
+methylKit provides the capability for storing objects in tabix format within various functions. Every methylKit object has their tabix-based flat-file database equivalent. For example, when reading a methylation call file the `dbtype` argument can be provided, this will create tabix based objects.
+```{r tabix,eval=FALSE}
+ myobj=methRead( file.list,
+               sample.id=list("test1","test2","ctrl1","ctrl2"),
+               assembly="hg18",treatment=c(1,1,0,0),
+               dbtype="tabix") 
+```
+The advantage of tabix-based objects is of course saving memory and more efficient parallelization for differential methylation calculation. However, since the data is written to a file and indexed whenever a new object is created, working with tabix-based objects will be slower at certain steps of the analysis compared to in-memory objects.
+
 ## Annotation of DMRs/DMCs and segments
-The regions of interest obtained through differential methylation or segmentation analysis often need to be integrated with genome annotation datasets. Without this type of integration, differential methylation or segmentation results will be hard to interpret in biological terms. The most common annotation task is to see where regions of interest land in relation to genes and gene parts and regulatory regions: Do they mostly occupy promoter, intronic or exonic regions? Do they overlap with repeats? Do they overlap with other epigenomic markers or long-range regulatory regions? These questions are not specific to methylation −nearly all regions of interest obtained via genome-wide studies have to deal with such questions. Thus, there are already multiple software tools that can produce such annotations. One is the Bioconductor package genomation (Akalin et al., 2015). It can be used to annotate DMRs/DMCs and it can also be used to integrate methylation proportions over the genome with other quantitative information and produce meta-gene plots or heatmaps. Another similar package is ChIPpeakAnno (Zhu et al., 2010), which is designed for ChIP-seq peak annotation but could also be used for DMR/DMC annotation to a certain degree.
+The regions of interest obtained through differential methylation or segmentation analysis often need to be integrated with genome annotation datasets. Without this type of integration, differential methylation or segmentation results will be hard to interpret in biological terms. The most common annotation task is to see where regions of interest land in relation to genes and gene parts and regulatory regions: Do they mostly occupy promoter, intronic or exonic regions? Do they overlap with repeats? Do they overlap with other epigenomic markers or long-range regulatory regions? These questions are not specific to methylation −nearly all regions of interest obtained via genome-wide studies have to deal with such questions. Thus, there are already multiple software tools that can produce such annotations. One is the Bioconductor package genomation (Akalin et al., 2015). It can be used to annotate DMRs/DMCs and it can also be used to integrate methylation proportions over the genome with other quantitative information and produce meta-gene plots or heatmaps. Below, we are reading a BED file for transcripts and using that to annotate DMCs with promoter/intron/exon/intergenic annotation.`genomation::readTranscriptFeatures` function reads a BED12 file, calculates the coordinates of promoters, exons and introns and the subsequent function uses that information for annotation.
+
+```{r}
+library(genomation)
+
+# read the gene BED file
+transcriptBED=system.file("extdata", "refseq.hg18.bed.txt", 
+                                           package = "methylKit")
+gene.obj=readTranscriptFeatures(transcriptBED)
+#
+# annotate differentially methylated CpGs with 
+# promoter/exon/intron using annotation data
+#
+annotateWithGeneParts(as(all.diff,"GRanges"),gene.obj)
+```
+
+Similarly, we can read the CpG island annotation and annotate our differentially methylated bases/regions with them.
+
+```{r}
+# read the shores and flanking regions and name the flanks as shores 
+# and CpG islands as CpGi
+cpg.file=system.file("extdata", "cpgi.hg18.bed.txt", 
+                                        package = "methylKit")
+cpg.obj=readFeatureFlank(cpg.file,
+                           feature.flank.name=c("CpGi","shores"))
+#
+# convert methylDiff object to GRanges and annotate
+diffCpGann=annotateWithFeatureFlank(as(all.diff,"GRanges"),
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                         feature.name="CpGi",flank.name="shores")
+```
 
 ## Other R packages that can be used for methylation analysis
 - DSS

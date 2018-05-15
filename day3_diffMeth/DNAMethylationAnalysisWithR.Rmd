@@ -332,7 +332,7 @@ res=methSeg(mbw,minSeg=10,G=1:4,
 
 ```
 
-In this case, we know that BIC criterion does not improve much after 4 segment classes. Now, we will not have a look at the carachteristics of the segment classes. We are going to plot mean methylation value and the length of the segment as a scatter plot.
+In this case, we know that BIC does not improve much after 4 segment classes. Now, we will not have a look at the carachteristics of the segment classes. We are going to plot mean methylation value and the length of the segment as a scatter plot.
 ```{r segplot}
 # plot 
 plot(res$seg.mean,

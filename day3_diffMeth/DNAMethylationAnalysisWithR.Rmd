@@ -12,6 +12,9 @@ bibliography: DNAmeth.bib
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+## Preface
+This document is partially designed for [compgen2018: BS-seq analysis course](http://bioinformatics.mdc-berlin.de/compgen/2018) at MDC-Berlin, Berlin Institute for Medical Systems Biology. The data required to run some of the code and the source code for this document is located at:
+https://github.com/BIMSBbioinfo/compgen2018/tree/master/day3_diffMeth
 
 ## DNA methylation analysis overview
 
@@ -22,7 +25,7 @@ Cytosine methylation (5-methylcytosine, 5mC) is one of the main covalent base mo
 DNA methylation is established by DNA methyltransferases DNMT3A and DNMT3B in combination with DNMT3L and maintained through cell division by the methyltransferase DNMT1 and associated proteins. DNMT3a and DNMT3b are in charge of the de novo methylation during early development. Loss of 5mC can be achieved passively by dilution during replication or exclusion of DNMT1 from the nucleus. Recent discoveries of ten-eleven translocation (TET) family of proteins and their ability to convert 5-methylcytosine (5mC) into 5-hydroxymethylcytosine (5hmC) in vertebrates provide a path for catalysed active DNA demethylation [@Tahiliani2009-ar]. Iterative oxidations of 5hmC catalysed by TET result in 5-formylcytosine (5fC) and 5-carboxylcytosine (5caC). 5caC mark is excised from DNA by G/T mismatch-specific thymine-DNA glycosylase (TDG), which as a result returns cytosine residue back to its unmodified state [@He2011-pw]. Apart from these, mainly bacteria but possibly higher eukaryotes contain base modifications on bases other than cytosine, such as methylated adenine or guanine [@Clark2011-sc].
 
 ### How to measure DNA methylation with bisulfite-sequencing
-One of the most reliable and popular ways to measure DNA methylation is high-throughput bisulfite sequencing. This method, and related ones, allow measurement of DNA methylation at the single nucleotide resolution. The bisulfite conversion turns unmethylated Cs to Ts and methylated Cs remain intact. Then, the only thing to do is to align the reads with those C->T conversions and count C->T mutations to calculate fraction of methylated bases. In the end, we can get quantitative genome-wide measurements for DNA methylation. 
+One of the most reliable and popular ways to measure DNA methylation is high-throughput bisulfite sequencing. This method, and the related ones, allow measurement of DNA methylation at the single nucleotide resolution. The bisulfite conversion turns unmethylated Cs to Ts and methylated Cs remain intact. Then, the only thing to do is to align the reads with those C->T conversions and count C->T mutations to calculate fraction of methylated bases. In the end, we can get quantitative genome-wide measurements for DNA methylation. 
 
 ### Analyzing DNA methylation data
 For the remainder of this chapter, we will explain how to do DNA methylation analysis using R. The analysis process is somewhat similar to the analysis patterns observed in other sequencing data analyses. The process can be chunked to four main parts with further sub-chunks:
@@ -394,11 +397,11 @@ diffCpGann=annotateWithFeatureFlank(as(all.diff,"GRanges"),
 ```
 
 ## Other R packages that can be used for methylation analysis
-- DSS
-- BSseq
-- BiSeq
-- MethylSeeker
-- QuasR
+- [DSS](http://bioconductor.org/packages/release/bioc/html/genomation.html) beta-binomial models with Empirical Bayes for moderating dispersion.
+- [BSseq](http://bioconductor.org/packages/release/bioc/html/BSseq.html) Regional differential methylation analysis using smoothing and linear regression based tests.
+- [BiSeq](http://bioconductor.org/packages/release/bioc/html/BiSeq.html) Regional differential methylation analysis using beta-binomial models
+- [MethylSeekR](http://bioconductor.org/packages/release/bioc/html/MethylSeekR.html): Methylome segmentation using HMM and cutoffs.
+- [QuasR](http://bioconductor.org/packages/release/bioc/html/QuasR.html): Methylation aware alignment and methylation calling. As well as fastQC-like fastq raw data quality check features.
 
 ## Exercises
 

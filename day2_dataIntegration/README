@@ -1,1 +1,3 @@
-repo for day 2
+# repo for day 2 genomics data integration
+
+You need to compile the .Rmd document within Rstudio to get interactivity. The tutorial relies on learnR package. https://rstudio.github.io/learnr/

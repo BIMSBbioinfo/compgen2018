@@ -1,0 +1,1752 @@
+---
+title: "Introduction to Genomic Ranges"
+author: "Vedran Franke"
+date: "May 10, 2018"
+output: 
+    learnr::tutorial:
+        numbered_headings: true
+        highlight: tango
+        theme: lumen
+        progressive: true
+        allow_skip: true
+        
+    
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+root_dir = getwd()
+knitr::opts_chunk$set(echo      = FALSE,
+                      cache     = FALSE,
+                      message   = FALSE, 
+                      error     = FALSE,
+                      highlight = TRUE)
+knitr::opts_knit$set(root.dir = root_dir)
+suppressPackageStartupMessages(library(learnr))
+suppressPackageStartupMessages(library(GenomicRanges))
+suppressPackageStartupMessages(library(rtracklayer))
+suppressPackageStartupMessages(library(genomation))
+suppressPackageStartupMessages(library(Gviz))
+axis = GenomeAxisTrack(GRanges('chr1', IRanges(1,20)), height=3)
+# tutorial_options(exercise.checker = checkr::check_for_learnr)
+```
+
+
+
+## Introduction
+
+A considerable time in computational genomics is spent on overlapping different features of the genome. Each feature can be represented with a genomic interval within the chromosomal coordinate system. In addition, each interval can carry different sorts of information. An interval may for instance represent exon coordinates or a transcription factor binding site. On the other hand, you can have base-pair resolution, continuous scores over the genome such as read coverage or scores that could be associated with only certain bases such as in the case of CpG methylation (See Figure 5.1 ). Typically, you will need to overlap intervals on interest with other features of the genome, again represented as intervals. For example, you may want to overlap transcription factor binding sites with CpG islands or promoters to quantify what percentage of binding sites overlap with your regions of interest. Overlapping mapped reads from high-throughput sequencing experiments with genomic features such as exons, promoters, enhancers can also be classified as operations on genomic intervals. You can think of a million other ways that involves overlapping two sets of different features on the genome. This chapter aims to show how to do analysis involving operations on genomic intervals.
+
+![](http://compgenomr.github.io/book/GenomicIntervals_data/nonR_Figures/genomeIntervalSummary.png)
+
+
+### GenomicRanges
+
+The Bioconductor project has a dedicated package called GenomicRanges to deal with genomic intervals. In this section, we will provide use cases involving operations on genomic intervals. The main reason we will stick to this package is that it provides tools to do overlap operations. However package requires that users operate on specific data types that are conceptually similar to a tabular data structure implemented in a way that makes overlapping and related operations easier. The main object we will be using is called GRanges object and we will also see some other related objects from the GenomicRanges package.
+
+### Overview
+
+The tutorial is split into 4 parts:
+
+1. Creating and manipulating with GenomicRanges
+
+2. Importing genomics data into GenomicRanges
+
+3. Extracting, summarizing, and visualizing different types of data
+
+4. Final sets of exercises
+
+### How to create genomic ranges?
+
+We will now create a toy genomic interval which is located on the plus strand
+of chromosome 1 and spans 5 base pairs, from 10th to 15th nucleotide.
+
+```{r message=FALSE, echo=FALSE}
+library(GenomicRanges)
+```
+
+```{r intro_1, include=TRUE, eval=TRUE, echo=TRUE}
+g = GRanges('chr1', IRanges(10,15), strand='+')
+```
+
+```{r, include=TRUE, eval=TRUE}
+g
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+a = AnnotationTrack(g, name=NULL, col='cornflowerblue', fill='cornflowerblue')
+plotTracks(list(axis,a), sizes=c(1,1))
+```
+
+-----
+
+### **Exercise:** 
+##### Create a GRanges object with the same coordinates as the previous object, but with on a minus strand
+
+**Target:**
+
+```{r g_strand_target, include=TRUE, echo=FALSE}
+g = GRanges('chr1', IRanges(10,15), strand='-')
+g
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+a = AnnotationTrack(g, name=NULL, col='cornflowerblue', fill='cornflowerblue')
+plotTracks(list(axis,a), sizes=c(1,1))
+```
+
+#### **Type the solution here:**
+```{r g_strand, exercise=TRUE}
+
+```
+
+**Hint:** g2 = GRanges(...)?
+
+```{r g_strand-solution, include=TRUE}
+g2 = GRanges('chr1', IRanges(10,15), strand='-')
+```
+
+### **Question:** 
+
+```{r strand_q1, echo=FALSE}
+question("Which characters can designate a strand in GRanges 
+         (i.e. is 'a' an allowed character)?",
+  answer("+, -", correct = TRUE),       
+  answer("+, -, R, C", correct=FALSE),
+  answer("+, -, W, C", correct = FALSE),
+  answer("+, -, *", correct = TRUE),
+  incorrect = "The allowed ranges characters are: + - * ",
+  allow_retry = TRUE
+)
+```
+
+-----
+
+### **Exercise:**
+##### Combine the two previously created GRanges object into one object.
+
+```{r g_combine_data, include=FALSE, eval=TRUE}
+g1 = GRanges('chr1', IRanges(10,15), strand='+')
+g2 = GRanges('chr1', IRanges(10,15), strand='-')
+gr = c(g1, g2)
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2, autodep=TRUE}
+g1 = GRanges('chr1', IRanges(10,15), strand='+')
+g2 = GRanges('chr1', IRanges(10,15), strand='-')
+gr = c(g1, g2)
+a = AnnotationTrack(gr, name=NULL, col='cornflowerblue', fill='cornflowerblue')
+plotTracks(list(axis,a), sizes=c(1,1))
+```
+
+
+```{r g_combine_ex, exercise=TRUE, exercise.setup = "g_combine_data"}
+
+```
+
+
+
+
+```{r g_combine_ex-solution, include=FALSE}
+gr = c(g1, g2)
+```
+
+**Hint:** How would you combine two vectors?
+
+-----
+
+### **Exercise:**
+##### Set the strand of the first range to '*'
+
+```{r g_adv_strand, exercise=TRUE, exercise.setup = "g_combine_data"}
+
+```
+
+```{r g_adv_strand-solution, include=FALSE}
+gr = c(g1, g2)
+strand(gr)[1] = '*'
+```
+
+-----
+
+## Manipulating with genomic ranges {-}
+
+### **Exercise:**
+##### Using the following functions transform our previously constructed set of ranges into the following ranges:
+
+```{r manip_data, eval=TRUE, include=FALSE, echo=TRUE}
+g1 = GRanges('chr1', IRanges(10,15), strand='+')
+g2 = GRanges('chr1', IRanges(10,15), strand='-')
+gr = c(g1, g2)
+```
+
+Our original GRange object:
+
+```{r, include=TRUE, echo=FALSE, exercise.setup='manip_data', echo=TRUE}
+g1 = GRanges('chr1', IRanges(10,15), strand='+')
+g2 = GRanges('chr1', IRanges(10,15), strand='-')
+gr = c(g1, g2)
+gr
+```
+
+
+### subsetting
+
+### **Exercise:**
+##### Select the first element of the gr object
+
+**Target:**
+
+```{r manip_subset_1_ex, eval=TRUE, include=TRUE, echo = FALSE, exercise.setup='manip_data'}
+gr[1]
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+orig = AnnotationTrack(gr, name='original', col='cornflowerblue', fill='cornflowerblue')
+targ = AnnotationTrack(gr[1], name='target', col='darkorange', fill='darkorange')
+plotTracks(list(axis,orig, targ), sizes=c(1,1,.5), background.title = "black")
+```
+
+```{r manip_subset_1, exercise=TRUE, exercise.setup='manip_data'}
+
+```
+
+```{r manip_subset_1-solution, eval=TRUE, include=FALSE, echo =TRUE, exercise.setup='manip_data'}
+gr[1]
+```
+
+
+### **Exercise:**
+##### Remove the first element from the gr object
+
+**Target:**
+
+```{r manip_subset_2_ex, eval=TRUE, include=TRUE, echo = FALSE, exercise.setup='manip_data'}
+gr[-1]
+```
+
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+orig = AnnotationTrack(gr, name='original', col='cornflowerblue', fill='cornflowerblue')
+targ = AnnotationTrack(gr[-1], name='target', col='darkorange', fill='darkorange')
+plotTracks(list(axis,orig, targ), sizes=c(1,1,.5), background.title = "black")
+```
+
+```{r manip_subset_2, exercise=TRUE, exercise.setup='manip_data'}
+
+```
+
+```{r manip_subset_2-solution, eval=TRUE, include=FALSE, echo =TRUE, exercise.setup='manip_data'}
+gr[-1]
+```
+
+### **Exercise:**
+##### Select the range on the **-** strand
+
+**Target:**
+
+```{r manip_subset_3_ex, eval=TRUE, include=TRUE, echo = FALSE, exercise.setup='manip_data'}
+gt = gr[strand(gr) == '-']
+gt
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+orig = AnnotationTrack(gr, name='original', col='cornflowerblue', fill='cornflowerblue')
+targ = AnnotationTrack(gt, name='target', col='darkorange', fill='darkorange')
+plotTracks(list(axis,orig, targ), sizes=c(1,1,.5), background.title = "black")
+```
+
+```{r manip_subset_3, exercise=TRUE, exercise.setup='manip_data'}
+
+```
+
+```{r manip_subset_3-solution, eval=TRUE, include=FALSE, echo =TRUE, exercise.setup='manip_data'}
+gr[strand(gr) == '-']
+```
+
+-----
+
+### `resize`
+### **Exercise:**
+##### Create the following range using the `resize` function
+
+**Target:**
+
+```{r manip_resize_1_tar, eval=TRUE, include=TRUE, echo = FALSE}
+gt = resize(gr, 4)
+gt
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+orig = AnnotationTrack(gr, name='original', col='cornflowerblue', fill='cornflowerblue')
+targ = AnnotationTrack(gt, name='target', col='darkorange', fill='darkorange')
+plotTracks(list(axis,orig, targ), sizes=c(1,1,1), background.title = "black")
+```
+
+```{r manip_resize_1-exercise, exercise=TRUE}
+
+```
+
+```{r manip_resize_1-solution, eval=TRUE, include=FALSE, echo =TRUE}
+resize(gr, 4)
+```
+
+#### **Exercise:**
+##### Create the following range using the `resize` function
+**Target:**
+
+```{r manip_resize_2_ex, eval=TRUE, include=TRUE, echo = FALSE}
+gt = resize(gr, 4, fix='center')
+gt
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+orig = AnnotationTrack(gr, name='original', col='cornflowerblue', fill='cornflowerblue')
+targ = AnnotationTrack(gt, name='target', col='darkorange', fill='darkorange')
+plotTracks(list(axis,orig, targ), sizes=c(1,1,1), background.title = "black")
+```
+
+```{r manip_resize_2, exercise=TRUE}
+
+```
+
+```{r manip_resize_2-solution, eval=TRUE, include=FALSE, echo =TRUE}
+resize(gr, 4, fix='center')
+```
+
+**Hint:** You should check the `fix` parameter.
+
+### **Question:** 
+```{r resize_q1}
+question("resize function is strand specific because:",
+  answer("The ranges on all strands are resized symetrically"),
+  answer("The ranges on all strands are resized asimetrically", correct = TRUE),
+  allow_retry = TRUE
+)
+```
+
+```{r resize_q2, echo=FALSE}
+question("resize function regards ranges with '*' strand as: ",
+  answer('+/plus', correct=TRUE),
+  answer("-/minus", correct=FALSE),
+  answer("neither"),
+  incorrect = 'resize function regards ranges with "*" strand as "+"',
+  allow_retry = TRUE
+)
+```
+
+### Outlook:
+
+Can you think of an experiment where the '*' strand would be an appropriate 
+strand designation for the ranges?
+
+-----
+
+### `flank`
+### **Exercise:**
+##### Create the following range using the `flank` function
+
+**Target:**
+
+```{r manip_flank_1_ex, eval=TRUE, include=TRUE, echo =FALSE}
+gt = flank(gr, 4)
+gt
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+orig = AnnotationTrack(gr, name='original', col='cornflowerblue', fill='cornflowerblue')
+targ = AnnotationTrack(gt, name='target', col='darkorange', fill='darkorange')
+plotTracks(list(axis,orig, targ), sizes=c(1,1,.5), background.title = "black")
+```
+
+
+```{r manip_flank_1, exercise=TRUE}
+
+```
+
+```{r manip_flank_1-solution}
+flank(gr, 4)
+```
+
+-----
+
+### `shift`
+### **Exercise:**
+##### Create the following range using the `shift` function
+
+**Target:**
+
+```{r manip_shift_1_tar, eval=TRUE, include=TRUE, echo = FALSE}
+gt = shift(gr, 3)
+gt
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+orig = AnnotationTrack(gr, name='original', col='cornflowerblue', fill='cornflowerblue')
+targ = AnnotationTrack(gt, name='target', col='darkorange', fill='darkorange')
+plotTracks(list(axis,orig, targ), sizes=c(1,1,1), background.title = "black")
+```
+
+```{r manip_shift_1, exercise=TRUE}
+
+```
+
+```{r manip_shift_1-solution, eval=TRUE, include=TRUE, echo = FALSE}
+shift(gr, 3)
+```
+
+-----
+
+### `promoters` 
+
+### **Exercise:**
+##### Using your newly attained knowledge of the `resize`, `flank` and `shift` functions, 
+##### try to create get the following output:
+
+```{r manip_promoters_exam, eval=TRUE, include=TRUE, echo=TRUE}
+gt = promoters(gr, 3, 3)
+gt
+```
+
+```{r, include=TRUE, eval=TRUE, echo=FALSE, fig.width=3, fig.height=2}
+orig = AnnotationTrack(gr, name='original', col='cornflowerblue', fill='cornflowerblue')
+targ = AnnotationTrack(gt, name='target', col='darkorange', fill='darkorange')
+plotTracks(list(axis,orig, targ), sizes=c(1,1,.5), background.title = "black")
+```
+
+```{r manip_promoters, exercise=TRUE}
+
+```
+
+```{r manip_promoters-solution}
+# Complicated solution
+resize(resize(gr, width=1, fix='start'), fix='center', width=6)
+
+# Easy solution
+promoters(gr, 3, 3)
+```
+
+-----
+
+### `reduce`
+
+### **Exercise:**
+##### Using the following example, try to figure out what the `reduce` function does. 
+
+**Target**
+
+```{r reduce_tar, eval=TRUE, include=TRUE, echo = TRUE, exercise.setup='manip_data'}
+reduce(c(gr, shift(gr, 2)))
+```
+
+```{r reduce_ex, exercise=TRUE, exercise.setup='manip_data'}
+
+```
+
+
+### **Question:**
+
+```{r reduce_q1, echo=FALSE}
+question("How many ranges will we get as a result of reduce, if we set **ignore.strand=TRUE**?",
+  answer("1", correct=TRUE),
+  answer("2"),
+  answer("4"),
+  incorrect = 'setting ignore.strand=TRUE collapses all ranges',
+  allow_retry = TRUE
+)
+```
+
+### Outlook
+
+Can you think of an biological example where the `reduce` function might be useful?
+
+-----
+
+## Operations between ranges
+
+**GenomicRanges** library contains useful operations for comparing different GRanges
+objects. The most basic use case is finding overlapping ranges between two sets of ranges
+object.
+
+
+Let's create a toy data set:
+
+```{r data_ovlap, include=FALSE, echo=FALSE, eval=TRUE}
+gr1 = GRanges('chr1', IRanges(start=c(10,22,30,11,21,31), width=3), 
+             strand=c('+','+','+','-','-','-'))
+gr2 = GRanges(c('chr1','chr2'), IRanges(10,23), strand='+')
+```
+
+```{r, include=TRUE, echo=TRUE, eval=TRUE}
+gr1 = GRanges('chr1', IRanges(start=c(10,22,30,11,21,31), width=3), 
+             strand=c('+','+','+','-','-','-'))
+gr2 = GRanges(c('chr1','chr2'), IRanges(10,23), strand='+')
+```
+
+```{r, echo=TRUE, include=TRUE, exercise.setup='data_ovlap', autodep=TRUE}
+gr1
+```
+
+```{r, echo=TRUE, include=TRUE, exercise.setup='data_ovlap', autodep=TRUE}
+gr2
+```
+
+### `countOverlaps`
+
+What will be the result of the following operation?
+
+```{r ovlap_data_1, include=TRUE, echo=TRUE, exercise.setup='data_ovlap', eval=FALSE}
+countOverlaps(gr1, gr2)
+```
+
+### **Question:**
+
+```{r countOverlaps_q1, echo=FALSE}
+question("countOverlaps(gr1, gr2), will produce the following vector:",
+  answer("1 0 0 0 0 0"),
+  answer("1 1 0 0 0 0", correct=TRUE),
+  answer("1 0 0 1 0 0"),
+  answer("1 1 0 1 1 0"),
+  incorrect = 'The first two ranges in g1 overlap ranges in g2',
+  allow_retry = TRUE
+)
+```
+
+Try it out for yourself
+
+```{r ovlap_data_1-exercise, include=TRUE, echo=TRUE, exercise.setup='data_ovlap', eval=FALSE, exercise=TRUE}
+
+```
+
+What will happen if we switch the two ranges?
+
+```{r ovlap_data_2, include=TRUE, echo=TRUE, exercise.setup='data_ovlap', eval=FALSE}
+countOverlaps(gr2, gr1)
+```
+
+### **Question:**
+
+```{r countOverlaps_q2, echo=FALSE}
+question("countOverlaps(g2, g1), will produce the following vector:",
+  answer("1 1 0 0 0 0"),
+  answer("1 1"),
+  answer("1 0"),
+  answer("2 0", correct=TRUE),
+  incorrect = 'Count overlaps is not a symmetric operation',
+  allow_retry = TRUE
+)
+```
+
+### **Question:**
+
+What will happen if we set the **ignore.strand=TRUE** parameter?
+
+```{r countOverlaps_q3, echo=FALSE}
+question("countOverlaps(g1, g2, ignore.strand = TRUE), will produce the following vector:",
+  answer("1 0 0 0 0 0"),
+  answer("1 1 0 0 0 0"),
+  answer("1 0 0 1 0 0"),
+  answer("1 1 0 1 1 0", correct=TRUE),
+  allow_retry = TRUE
+)
+```
+
+### **Exercise:**
+##### From *g1* subset all ranges which overlap with *g2*, irrespective of the strand.
+
+**Target:**
+
+```{r ovlap_data_2_tar, include=TRUE, echo=FALSE, exercise.setup='data_ovlap', eval=TRUE}
+gr1[countOverlaps(gr1, gr2, ignore.strand=TRUE) > 0]
+```
+
+```{r include=TRUE, echo=FALSE, exercise.setup='data_ovlap', eval=TRUE}
+a1 = AnnotationTrack(gr1, name='gr1', col='cornflowerblue', fill='cornflowerblue')
+a2 = AnnotationTrack(gr2, name='gr2', col='darkblue', fill='darkblue')
+a3 = AnnotationTrack(gr1[countOverlaps(gr1, gr2, ignore.strand=TRUE) > 0], name='Target', 
+                     col='darkorange', fill='darkorange')
+plotTracks(list(axis,a1, a2, a3), sizes=c(1,1,1,1), background.title = "black")
+
+```
+
+
+```{r ovlap_data_2_ex, include=TRUE, echo=FALSE, exercise.setup='data_ovlap', eval=TRUE, exercise=TRUE}
+
+```
+
+```{r ovlap_data_2_ex-solution}
+gr1[countOverlaps(gr1, gr2, ignore.strand=TRUE) > 0]
+```
+
+### **Exercise:**
+##### Adding annotation to Ranges 
+##### Add a column to **gr2**, which designates the number of overlaps between each 
+##### range in **gr2** and **gr1**. 
+
+```{r annot_1_data, include=TRUE, echo=FALSE, exercise.setup='data_ovlap', eval=TRUE}
+gr2$score = countOverlaps(gr2, gr1)
+gr2
+```
+
+```{r annot_1_ex, include=TRUE, echo=FALSE, exercise.setup='data_ovlap', eval=TRUE, exercise=TRUE}
+
+```
+
+```{r annot_1_ex-solution, include=TRUE, echo=FALSE, exercise.setup='data_ovlap', eval=TRUE}
+gr2$score = countOverlaps(gr2, gr1)
+```
+
+**Hint:** How would you add a column to the data frame?
+
+Now add another column, which will contain the number of overlaps irrespective of the strand.
+
+```{r annot_2, include=TRUE, echo=FALSE, exercise.setup='data_ovlap', eval=TRUE}
+gr2$score        = countOverlaps(gr2, gr1)
+gr2$score_strand = countOverlaps(gr2, gr1, ignore.strand=TRUE)
+gr2
+```
+
+```{r annot_2_ex, include=TRUE, echo=FALSE, exercise.setup='data_ovlap', eval=TRUE, exercise=TRUE}
+
+```
+
+```{r annot_2_ex-solution, include=TRUE, echo=FALSE, exercise.setup='data_ovlap', eval=TRUE}
+gr2$score        = countOverlaps(gr2, gr1)
+gr2$score_strand = countOverlaps(gr2, gr1, ignore.strand=TRUE)
+gr2
+```
+
+What will the following function do?
+
+```{r annot_values, include=TRUE, echo=TRUE, exercise.setup='annot_2', eval=FALSE}
+values(g2)
+```
+
+```{r annot_values-exercise, include=TRUE, echo=TRUE, exercise.setup='annot_2', eval=FALSE, exercise=TRUE}
+
+```
+
+### `findOverlaps`
+
+When comparing sets of ranges, sometimes knowing just the intersection does not provide 
+enough information, rather we would like to know which ranges in set A (gr1) overlap which
+ranges in set B (gr2).
+To achieve this we use the `findOverlaps` function.
+`findOverlaps` is extremely useful when we want to compare annotations 
+from two features - for example, if we want to compare ChIP signal strength, between
+two ChIP-seq experiments, or methylation signal strength over promoters.
+
+```{r findOverlaps_1, include=TRUE, echo=TRUE, exercise.setup='ovlap_data', eval=TRUE}
+findOverlaps(gr1, gr2)
+```
+
+
+## Getting genomic regions into R
+
+Various file formats were developed for storing different types of genomics data;
+from **.cel** files for storing Affymetrix microarray measurements, to **.VCF**
+format for handling genomic polymorphisms.
+
+You can find a detailed description of the various file formats on the following [link](https://genome.ucsc.edu/FAQ/FAQformat.html).
+
+In the next section you will learn how to import the most common file types for 
+storing range data into GRanges objects.
+
+The most basic file formats are:
+
+1. bed
+
+2. GTF/GFF - stores hierarchical range information - exons connected into transcripts
+
+3. wig/bigWig - stores experimental measurements over genomic regions (continuous scores)
+
+#### Location of the data
+
+All of the exercise data is located in the **./Data** folder.
+You can check the contents of the folder by running the following command:
+`list.files('./Data')`.
+
+To read the data into R, files can be specified relative to the current folder:
+`dat = read.table('./Data/CTCF_GM12878_hg38.bed')`
+
+
+### Importing .bed files
+
+Bed files are basic text files for storing genomic coordinate data.
+Standard bed format contains three columns:
+
+1. chromosome
+
+2. start location of the range of interest
+
+3. end location of the range of interest
+
+```{r, echo=FALSE, include=TRUE, eval=TRUE}
+cpg_file = './Data/UCSC_CpGIslands.bed.gz'
+tab = read.table(cpg_file)[,1:3]
+colnames(tab) = c('chr','start','end')
+head(tab)
+```
+
+### **Exercise:**
+##### Read in the **./Data/UCSC_CpGIslands.bed.gz**, and convert the resulting table into
+##### a GRanges object:
+
+```{r import_bed_1_ex, include=TRUE, echo=FALSE, exercise.setup='ovlap_data', eval=TRUE, exercise=TRUE}
+
+```
+
+```{r import_bed_1_ex-solution, include=TRUE, echo=FALSE, exercise.setup='ovlap_data', eval=TRUE}
+cpg_file = './Data/UCSC_CpGIslands.bed.gz'
+tab = read.table(cpg_file)
+g   = GRanges(tab$V1, IRanges(tab$V2, tab$V3))
+```
+
+What does the function `makeGRangesFromDataFrame` do? Can you create the same
+GRanges object using this function?
+
+```{r import_bed_2_ex, include=TRUE, echo=FALSE, exercise.setup='ovlap_data', eval=TRUE, exercise=TRUE}
+
+```
+
+```{r import_bed_2_ex-solution, include=TRUE, echo=FALSE, exercise.setup='ovlap_data', eval=TRUE}
+cpg_file = './Data/UCSC_CpGIslands.bed.gz'
+tab      = read.table(cpg_file)
+colnames(tab) = c('chr','start','end')
+cpgi     = makeGRangesFromDataFrame(tab)
+```
+
+
+### **Exercise:**
+##### Try using the **readGeneric** function from the **genomation** package to read in the
+##### CpG islands.
+
+```{r import_bed_3_ex, exercise=TRUE}
+
+```
+
+```{r import_bed_3_ex-solution, include=TRUE, echo=FALSE, exercise.setup='ovlap_data', eval=TRUE}
+library(genomation)
+cpgi_file = './Data/UCSC_CpGIslands.bed.gz'
+cpgi = readGeneric(cpgi_file)
+```
+
+
+### Importing GFF/GTF files
+
+GFF/GTF files are mostly used for storing information about locations of 
+exons and their connection into transcripts, and genes. They can, however,
+be used for storing any kind of hierarchical range data.
+
+
+```{r gff_structure, include=TRUE, echo=FALSE}
+g = rtracklayer::import.gff('./Data/hg38_EnsemblGenes.chr21.gtf.gz')
+head(g)
+```
+
+The easiest way to import GFF/GTF files into R is using the **import.gff** function
+from the **rtracklayer** package.
+
+Explore the structure of the gff file. What does **type** column represent.
+
+For the full description of the GFF/GTF format, please go to the following [link](https://genome.ucsc.edu/FAQ/FAQformat.html#format3).
+
+### **Exercise:**
+##### Use the `import.gff` function to read in the gff file into a GRanges object.
+
+```{r import_gff_3_ex, exercise=TRUE}
+
+```
+
+```{r import_gff_3_ex-solution, include=TRUE, echo=FALSE, exercise.setup='ovlap_data', eval=FALSE}
+library(rtracklayer)
+file = './Data/hg38_EnsemblGenes.chr21.gtf.gz' 
+gtf  = import.gff(file)
+```
+
+### **Exercise:**
+#### How many genes are in the GTF file?
+
+```{r import_gff_4_ex, exercise=TRUE}
+
+```
+
+```{r import_gff_4_ex-solution, include=TRUE, echo=FALSE, exercise.setup='ovlap_data', eval=FALSE}
+library(rtracklayer)
+file  = './Data/hg38_EnsemblGenes.chr21.gtf.gz'
+gtf   = import.gff(file)
+genes = subset(gtf, type == 'gene')
+length(genes)
+```
+
+### **Question:**
+```{r genes_q1, echo=FALSE}
+question("How many genes are in the GTF file?",
+    answer("29442"),
+    answer("832", correct=TRUE),
+    answer("12455"),
+    answer("2446"),
+    allow_retry = TRUE,
+    incorrect   = "First subset the genes from the GTF object"
+)
+```
+
+
+#### **Exercise**
+##### How many genes have CpG islands overlapping their promoters?
+##### (if we consider that the promoter regions is +/- 1000 bp around the TSS)
+
+```{r cpg_tss_ex, exercise=TRUE, exercise=TRUE}
+
+```
+
+
+```{r cpg_tss_ex-solution, include=FALSE, echo = FALSE}
+gene = subset(gff, type=='gene')
+prom = promoters(gene, 1000, 1000)
+sum(countOverlaps(prom, cpgi) > 0)
+```
+
+### **Question:**
+
+```{r CpG_Promoters}
+question("How many genes have CpG islands overlapping their promoters?",
+  answer("180"),
+  answer("189"),
+  answer("206"),
+  answer("213"),
+  answer("225", correct=TRUE),
+  allow_retry = TRUE,
+  incorrect   = 'Check whether the promoters were expanded properly'
+)
+```
+
+
+### **Exercise**
+##### Import the CTCF peaks from GM12878 and K562 cell lines, and answer the following
+##### questions:
+
+```{r import_exercise_1, exercise=TRUE}
+
+```
+
+```{r import_exercise_1-solution}
+library(genomation)
+g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+
+r = reduce(c(g_k562, g_gm))
+r$k562 = countOverlaps(r, g_k562) > 0
+r$gm   = countOverlaps(r, g_gm  ) > 0
+with(values(r), table(k562, gm))
+```
+
+### **Question:**
+
+```{r import_ex_q1}
+question("How many peaks are specific to the k562 cell line?",
+  answer("1520"),
+  answer("1800"),
+  answer("3441"),
+  answer("1174", correct=TRUE),
+  answer("626"),
+  allow_retry = TRUE
+)
+```
+
+### **Question:**
+
+```{r import_ex_q2}
+question("How many peaks are common to both cell lines?",
+  answer("1520"),
+  answer("1800"),
+  answer("3441"),
+  answer("1174"),
+  answer("626", correct=TRUE),
+  allow_retry = TRUE
+)
+```
+
+
+The following picture shows a screenshot from the UCSC browser:
+
+![UCSC browser screenshot](https://raw.githubusercontent.com/frenkiboy/CompGen_2018/master/Figures/Browser_Screenshot.png)
+
+### **Question:**
+
+```{r import_ex_q3}
+question("What is the correct order of file formats in the screenshot?",
+  answer("gtf, bed, wig, bed", correct=TRUE),
+  answer("bed, bed, wig, bed"),
+  answer("bed, gtf, wig, bed"),
+  answer("bed, bed, wig, gtf"),
+  allow_retry = TRUE
+)
+```
+
+-----
+
+### Handling Transcripts with GenomicRanges
+
+Transcripts are (by definition) sets of exons, annotated with a common identifier.
+Sometimes we are interested in statistics over sets of ranges, 
+rather then individual ranges. For example, we are interested in number of reads
+which overlap each gene in the genome - where each gene consists of a set of exons
+(a set of ranges); or we are interested in whether our transcription factor of interest
+overlaps certain functional genomic regions (transcription start sites, cpg islands, 
+exons, introns...).
+For such usage GenomicRanges implements the **GRangesList** class, where each
+element consists of a set of **GenomicRanges**
+
+**GRanges** objects can be combined into a **GRangesList** in the following way:
+
+```{r granges_list, include=TRUE, eval=TRUE, echo=TRUE}
+g1 = GRanges('chr1', IRanges(10,15), strand='+')
+g2 = GRanges('chr1', IRanges(10,15), strand='-')
+gl = GRangesList(g1, g2)
+gl
+```
+
+**GRanges** objects can also be converted into into a **GRangesList** object using the `split`
+function.
+
+```{r, include=TRUE, echo=TRUE, eval=TRUE}
+library(rtracklayer)
+file = './Data/hg38_EnsemblGenes.chr21.gtf.gz'
+gff  = import.gff(file)
+exon = subset(gff, type == 'exon')
+transcripts = split(exon, exon$transcript_id)
+transcripts[1:2]
+```
+
+### **Exercise:**
+##### Plot the following distributions (histograms):
+
+1. Number of exons per transcript
+
+```{r genes_ex1, exercise=TRUE}
+
+```
+
+
+```{r genes_ex1-solution}
+## Slow way:
+n_exons = unlist(lapply(transcripts, length))
+
+## Fast way:
+n_exons = elementNROWS(transcripts)
+
+
+hist(n_exons, breaks=50)
+```
+
+2. Distribution of transcript widths
+
+```{r genes_ex2, exercise=TRUE}
+
+```
+
+```{r genes_ex2-solution}
+tr_width = sum(width(transcripts))
+
+hist(tr_width, breaks=50)
+```
+
+3. Distribution of gene widths
+
+```{r genes_ex3, exercise=TRUE}
+
+```
+
+```{r genes_ex3-solution}
+gene_width = unlist(width(range(transcripts)))
+
+hist(gene_width, breaks=50)
+```
+
+### **Question:**
+What does the `range` function do to a **GRangesList** object?
+
+```{r range_GRangesList}
+question("What does the 'range' function do to a GRangesList object?",
+  answer("Returns the longest range from each set of the GRangesList"),
+  answer("Returns lowest start coordinate and the highest end coordinate of each element of the GRangesList", correct=TRUE),
+  answer("Returns lowest start coordinate and the highest end coordinate of the whole GRangesList"),
+  allow_retry = TRUE
+)
+```
+
+### Overlapping **GRangesList**
+
+The same functions we used for comparing between ranges can be used on 
+**GRangesList** objects.
+
+Let's create a toy dataset:
+
+```{r grglist_ovlap, echo=TRUE, eval=TRUE, include=TRUE}
+gr1 = GRanges('chr1', IRanges(start=c(10,22,30,11,21,31), width=3), 
+             strand=c('+','+','+','-','-','-'))
+gr1
+gr2 = GRanges(c('chr1','chr2'), IRanges(10,23), strand='+')
+gr3 = invertStrand(gr2)
+
+grlist = GRangesList(gr2, gr3)
+grlist
+```
+
+
+### **Question:**
+
+```{r grglist_ovlap_q1, echo=FALSE}
+question("What will the following operation return: countOverlaps(gr1, grlist)",
+  answer("1 1 0 0 0 0"),
+  answer("1 2 0 0 0 0"),
+  answer("1 2 0 1 2 0"),
+  answer("1 1 0 1 1 0", correct=TRUE),
+  allow_retry = TRUE
+)
+```
+
+### **Question:**
+
+```{r grglist_ovlap_q2, echo=FALSE}
+question("What will the following operation return: countOverlaps(grlist, gr1)",
+  answer("1 1 0 0 0 0"),
+  answer("1 1 0 1 1 0"),
+  answer("1 1 1 1 "),
+  answer("1 1"),
+  answer("2 2", correct=TRUE),
+  allow_retry = TRUE
+)
+```
+
+### **Question:**
+
+```{r grglist_ovlap_q3, echo=FALSE}
+question("What will the following operation return: countOverlaps(grlist, grlist)",
+  answer("1 1", correct=TRUE),
+  answer("2 2"),
+  answer("1 1 1 1 "),
+  allow_retry = TRUE
+)
+```
+
+You can verify the results here:
+```{r grglist_ovlap_ex, exercise=TRUE, exercise.setup = 'grglist_ovlap'}
+
+```
+
+
+-----
+
+## Dealing with continuous scores 
+
+Most high-throughput data can be viewed as a continuous score over the bases of the genome. In case of RNA-seq or ChIP-seq experiments the data can be represented as read coverage values per genomic base position. In addition, other information (not necessarily from high-throughput experiments) can be represented this way. The GC content and conservation scores per base are prime examples of other data sets that can be represented as scores. This sort of data can be stored as a generic text file or can have special formats such as Wig (stands for wiggle) from UCSC, or the bigWig format is which is indexed binary format of the wig files. The bigWig format is great for data that covers large fraction of the genome with varying scores, because the file is much smaller than regular text files that have the same information and it can be queried easier since it is indexed.
+
+In R/Bioconductor, the continuous data can also be represented in a compressed format, in a format called Rle vector, which stands for run-length encoded vector. This gives superior memory performance over regular vectors because repeating consecutive values are represented as one value in the Rle vector.
+
+![Rle](http://compgenomr.github.io/book/GenomicIntervals_data/nonR_Figures/Rle_demo.png)
+
+Typically, for genome-wide data you will have a RleList object which is a list of Rle vectors per chromosome.
+
+**GRange** can be converted into an **Rle** object using the `coverage` function
+
+Let's create our test GRanges Object:
+
+```{r wig_1, echo=TRUE, include=TRUE, eval=TRUE}
+set.seed(10)
+g = GRanges('chr1', IRanges(1:15, width = rpois(15, 5)), strand='+')
+```
+
+```{r}
+set.seed(10)
+g = GRanges('chr1', IRanges(1:15, width = rpois(15, 5)), strand='+')
+g
+```
+
+
+What happens when we use the coverage function?
+
+### **Exercise:**
+##### Use the `coverage` function to convert the **GRanges** object the **Rle** object.
+
+```{r coverage_1_ex, exercise=TRUE, include=TRUE, echo =TRUE, exercise.setup='wig_1'}
+
+```
+
+```{r coverage_1_ex-solution, include=TRUE, echo =TRUE}
+cov = coverage(g)
+```
+
+### **Question:**
+```{r Rle_Question}
+question("What king of object does coverage(g) return?",
+  answer("GRanges"),
+  answer("Rle"),
+  answer("list"),
+  answer("GRangesList"),
+  answer("RleList", correct=TRUE),
+  allow_retry = TRUE,
+  incorrect   = 'You can check the type of an object using the class function'
+)
+```
+
+
+### **Exercise**
+##### Extract the first element of the **cov** object.
+
+```{r coverage_2_ex, exercise=TRUE}
+
+```
+
+```{r coverage_2_ex-solution, echo=FALSE}
+cov = coverage(g)
+cov[['chr1']]
+```
+
+
+### Importing wig/bigWig files
+
+**wig/bigWig** files contain continuous signal representations over each position 
+along the genome. (i.e. think of wiggly genome browser representations).
+
+They can be imported into R using the `import.bw` function from the **rtracklayer**
+package.
+
+#### **Exercise**
+##### Use the import.bw function to import the whole genome bisulphite sequencing (WGBS)
+##### data from the K562 cell line
+
+The data is located in the `./Data` folder.
+
+```{r import_bw_ex, exercise=TRUE}
+
+```
+
+```{r import_bw_ex-solution, echo=FALSE}
+meth_file = './Data/WGBS_K562_hg38.chr21.bigWig'
+meth      = import.bw(meth_file)
+```
+
+### **Question:**
+```{r RleList_Question, echo=FALSE}
+question("What kind of object does import.bw create when the `as='RleList'` argument is used?",
+  answer("GRanges"),
+  answer("Rle"),
+  answer("list"),
+  answer("GRangesList"),
+  answer("RleList", correct=TRUE),
+  allow_retry = TRUE
+)
+```
+
+### **Exercise**
+##### Plot the distribution of methylated CpGs 
+
+Plot a histogram of methylation values imported using the `import.bw` function
+on the K562 WGBS data.
+
+```{r plot_meth, exercise=TRUE}
+
+```
+
+```{r plot_meth-solution, echo=FALSE}
+meth_file = './Data/WGBS_K562_hg38.chr21.bigWig'
+meth      = import.bw(meth_file)
+hist(meth$score[meth$score > 0], breaks = 50)
+```
+
+
+### **Exercise** 
+##### Import the methylation data for K562 cell line, and answer the following question:
+
+For this exercise you have to combine the knowledge of mutliple previous exercises.
+You will need to:
+
+1. Import the CTCF peaks from k562 and GM12878 cell lines
+
+2. Find which peaks are specific to which cell line
+
+3. Import the methylation data
+
+4. Assign the appropriate methylation values to each peak
+
+5. Calculate the average methylation value per peak
+
+
+```{r import_exercise_3, exercise=TRUE}
+
+```
+
+```{r import_exercise_3-solution}
+library(genomation)
+library(rtracklayer)
+g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+
+r = reduce(c(g_k562, g_gm))
+k562_ind = countOverlaps(r, g_k562) > 0
+gm_ind   = countOverlaps(r, g_gm  ) > 0
+
+r$class = 'Common'
+r$class[ k562_ind & !gm_ind] = 'k562'
+r$class[!k562_ind &  gm_ind] = 'gm'
+
+
+meth = import.bw('./Data/WGBS_K562_hg38.chr21.bigWig')
+fom  = as.data.frame(findOverlaps(r, meth))
+fom$meth  = meth$score[fom$subjectHits]
+fom$class = r$class[fom$queryHits]
+
+with(fom, tapply(meth, class, mean))
+```
+
+### **Question:**
+
+```{r meth_ex_q1, echo=FALSE}
+question("K562 specific CTCF bound regions have 'on average':",
+  answer("Higher methylated than GM12878 specific regions"),
+  answer("Lower methylated than GM12878 specific regions", correct=TRUE),
+  answer("Both sets of regions are equally methylated"),
+  allow_retry = TRUE
+)
+```
+
+### **Important Question**
+Is there a conceptual mistake in the approach we took to solve the exercise? 
+(Of course there is - otherwise this question would not make sense)
+Can you try to figure out where the mistake is? (it is non trivial).
+
+### **Exercise**
+##### Try to discover the mistake in the previous exercise
+
+Try to explore the steps of the previous exercise and see where the mistake
+might be.
+
+```{r import_exercise_4, exercise=TRUE}
+library(genomation)
+library(rtracklayer)
+g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+
+r = reduce(c(g_k562, g_gm))
+k562_ind = countOverlaps(r, g_k562) > 0
+gm_ind   = countOverlaps(r, g_gm  ) > 0
+
+r$class = 'Common'
+r$class[ k562_ind & !gm_ind] = 'k562'
+r$class[!k562_ind &  gm_ind] = 'gm'
+
+
+meth = import.bw('./Data/WGBS_K562_hg38.chr21.bigWig')
+fom  = as.data.frame(findOverlaps(r, meth))
+fom$meth  = meth$score[fom$subjectHits]
+fom$class = r$class[fom$queryHits]
+
+with(fom, tapply(meth, class, mean))
+```
+
+
+### **Exercise**
+##### Repeat the whole exercise using the WGBS bed file
+
+
+```{r import_exercise_5, exercise=TRUE}
+
+```
+
+```{r import_exercise_5-solution}
+library(genomation)
+library(rtracklayer)
+g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+
+r = reduce(c(g_k562, g_gm))
+k562_ind = countOverlaps(r, g_k562) > 0
+gm_ind   = countOverlaps(r, g_gm  ) > 0
+
+r$class = 'Common'
+r$class[ k562_ind & !gm_ind] = 'k562'
+r$class[!k562_ind &  gm_ind] = 'gm'
+
+
+meth = import.bed('./Data/WGBS_K562_hg38.chr21.bed.gz')
+fom  = as.data.frame(findOverlaps(r, meth))
+fom$meth  = meth$score[fom$subjectHits]
+fom$class = r$class[fom$queryHits]
+
+with(fom, tapply(meth, class, mean))
+```
+
+**Hint:** import.bed from rtracklayer package
+
+### **Question:**
+
+```{r meth_ex_q2, echo=FALSE}
+question("K562 specific CTCF bound regions have 'on average':",
+  answer("Higher methylated than GM12878 specific regions", correct=TRUE),
+  answer("Lower methylated than GM12878 specific regions"),
+  answer("Both sets of regions are equally methylated"),
+  allow_retry = TRUE
+)
+```
+
+## Summarizing information over ranges
+
+Very often we want to summarize or visualize the data over ranges of interest.
+This is most often done in three ways:
+
+1. Plotting summary statistics for ranges of interest (as you have done in the previous
+exercise)
+
+2. By plotting meta-plots of signal over the ranges of interest (i.e. histone mark
+signal strength over transcription start site)
+
+![Profile of histone marks over TSS](https://raw.githubusercontent.com/frenkiboy/CompGen_2018/master/Figures/Profile.png)
+
+3. By plotting multiple parallel heatmaps.
+
+![Transcription factor colocalization heatmap](https://raw.githubusercontent.com/frenkiboy/CompGen_2018/master/Figures/Heatmap.png)
+
+
+
+Ranged data can be easily summarized using the `ScoreMatrix` family of 
+functions from the **genomation** package.
+
+### **Exercise**
+##### Let's repeat the exercise of comparing average methylation in K562 and GM12878 CTCF peaks
+
+Firstly, we load and combine the CTCF peaks:
+
+```{r combine_peaks, include=TRUE, echo=TRUE, eval=TRUE}
+library(genomation)
+library(GenomicRanges)
+g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+
+r = reduce(c(g_k562, g_gm))
+k562_ind = countOverlaps(r, g_k562) > 0
+gm_ind   = countOverlaps(r, g_gm  ) > 0
+
+r$class = 'Common'
+r$class[ k562_ind & !gm_ind] = 'k562'
+r$class[!k562_ind &  gm_ind] = 'gm'
+```
+
+Now you can extract the average value per range directly from the **bed** file.
+using the `ScoreMatrixBin` function.
+You will need the following parameter **is.noCovNA** for the `ScoreMatrixBin` function.
+The parameter changes the functionality so that the 
+non-covered bases are regarded as NA values and are not taken into account
+when calculating summary statistics.
+You will additionally need to specify which column contains the methylation
+scores using the **weight.col** parameter.
+
+```{r, meth_ex1, exercise=TRUE}
+
+```
+
+```{r, meth_ex1-solution}
+meth = import.bed('./Data/WGBS_K562_hg38.chr21.bed.gz')
+r$meth_score = ScoreMatrixBin(meth, r,
+                              is.noCovNA = TRUE, bin.num = 1, weight.col = 'score')
+
+```
+
+### Handling multiple signal files 
+
+`ScoreMatrixBin` function takes as input one bigWig file and our ranges of interest, 
+and returns the signal summary over our ranges of interest.
+Quite often we are interested in signal profiles from multiple experiments.
+For this we use the `ScoreMatrixList` function.
+
+### **Exercise:**
+##### Load the methylation profiles from multiple WGBS bed files
+
+Load the methylation **bed** files from K562 and GM12878 into R (preferably using
+a loop/lapply), and calculate the average methylation value per region, per experiment.
+Do not forget about **is.noCovNA** and **weight.col**
+
+```{r vis_ex1, exercise=TRUE, exercise.setup = 'combine_peaks'}
+# r variable - contains merged CTCF peaks from K562 and GM12878
+
+```
+
+```{r vis_ex1-solution}
+library(genomation)
+library(GenomicRanges)
+g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+
+r = reduce(c(g_k562, g_gm))
+k562_ind = countOverlaps(r, g_k562) > 0
+gm_ind   = countOverlaps(r, g_gm  ) > 0
+
+r$class = 'Common'
+r$class[ k562_ind & !gm_ind] = 'k562'
+r$class[!k562_ind &  gm_ind] = 'gm'
+
+bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
+bed_files = bed_files[grepl('bed', bed_files)]
+wgbs = lapply(bed_files, rtracklayer::import.bed)
+names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
+
+sml = ScoreMatrixList(wgbs, r, is.noCovNA = TRUE, bin.num = 1, weight.col = 'score')
+```
+
+### **Exercise:**
+##### Plot a scatterplot of average methylation intensities and color them based on 
+##### whether the peak was detected in one or multiple cell lines
+
+In this exercise you will compare the average methylation levels in 
+CTCF peaks between K562 and GM12878 cells.
+
+```{r vis_ex2, exercise=TRUE, exercise.setup = 'combine_peaks'}
+# r variable - contains merged CTCF peaks from K562 and GM12878
+
+```
+
+```{r, echo=FALSE, include=TRUE, eval=TRUE, fig.width=6.5, fig.height=5, warning=FALSE, message=FALSE}
+library(genomation)
+library(rtracklayer)
+
+
+g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+
+r = reduce(c(g_k562, g_gm))
+k562_ind = countOverlaps(r, g_k562) > 0
+gm_ind   = countOverlaps(r, g_gm  ) > 0
+
+r$class = 'Common'
+r$class[ k562_ind & !gm_ind] = 'k562'
+r$class[!k562_ind &  gm_ind] = 'gm'
+
+# imports methylation
+bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
+bed_files = bed_files[grepl('bed', bed_files)]
+wgbs = lapply(bed_files, rtracklayer::import.bed)
+names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
+
+sml = ScoreMatrixList(wgbs, r, is.noCovNA = TRUE, bin.num = 1, weight.col = 'score')
+
+# plots the methylation
+dat = data.frame(r$class, sml)
+library(ggplot2)
+ggplot(dat, aes(WGBS_GM12878, WGBS_K562, color=r.class)) +
+    geom_point(size=.5) +
+    scale_color_brewer(palette='Set2') +
+    geom_abline(slope=1) +
+    xlim(c(0,100)) +
+    ylim(c(0,100))
+```
+
+
+```{r vis_ex2-solution}
+# imports methylation
+bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
+bed_files = bed_files[grepl('bed', bed_files)]
+wgbs = lapply(bed_files, rtracklayer::import.bed)
+names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
+
+sml = ScoreMatrixList(wgbs, r, is.noCovNA = TRUE, bin.num = 1, weight.col = 'score')
+
+dat = data.frame(r$class, sml)
+library(ggplot2)
+ggplot(dat, aes(WGBS_GM12878, WGBS_K562, color=r.class)) +
+    geom_point() +
+    scale_color_brewer(palette='Set2')
+```
+
+### **Exercise:**
+##### Compare the methylation levels of all available methylation data
+
+Now we will expand the previous exercise to multiple tissues.
+**./Data/Meth** folder contains methylation data from ~100 tissues and cell lines
+produced by Encode and Roadmap epigenetics projects.
+
+Your goal is fourfold:
+
+1. Combine the CTCF peaks from all cell lines into one GRanges object.
+
+2. Extract the average methylation signal from the WGBS files using `ScoreMatrixList`
+
+3. Use the `Heatmap` function from the **ComplexHeatmap** package to 
+cluster and visualize a heatmap of methylation profiles.
+
+4. Try to conclude something based on the obtained results.
+
+**Hint:** The resulting heatmap can be quite large - it might be worth to save it as a png file
+
+```{r cluster_methylation, exercise=TRUE}
+
+```
+
+```{r cluster_methylation-solution}
+library(genomation)
+library(rtracklayer)
+library(ComplexHeatmap)
+# reads in the CTCF files
+ctcf_files = list.files('./Data/CTCF', full.names=TRUE)
+ctcf_list  = lapply(ctcf_files, readGeneric)
+ctcf_list  = GRangesList(ctcf_list)
+names(ctcf_list) = sub('_CTCF.GRCh38.bed.gz','',basename(ctcf_files))
+
+ctcf_reduced = reduce(unlist(ctcf_list))
+
+# reads in the methylation files - this might take a minute or two
+meth_files = list.files('./Data/Meth', full.names=TRUE)
+meth_list  = lapply(meth_files, import.bed)
+names(meth_list) = sub('_WGBS_GRCh38.bed.gz','',basename(meth_files))
+
+# extracts the methylation scores
+meth_profiles = ScoreMatrixList(meth_list, ctcf_reduced, bin.num=1, is.noCovNA = TRUE, weight='score')
+meth_data = data.frame(meth_profiles)
+meth_comp = na.omit(meth_data)
+
+# plots the methylation values
+Heatmap(meth_comp) 
+```
+
+
+### Visualization of signal data
+
+
+We will use the `ScoreMatrixList function` to extract the methylation data
+over transcription start sites, and then visualize the data using as meta plot using the
+`plotMeta` function, and as a heatmap using the `multiHeatMatrix`.
+To visualize the methylation pattern in a region of +/- 5kb around the TSS.
+Because of the size of the resulting region, the visualization would be quite slow,
+therefore we need to average the signal in each promoter peak into smaller number of bins, of
+equal size.
+Previously we set the **bin.num** parameter to 1, which just calculated the average
+methylation value per peak/promoter region. Now we will increase the parameter so that
+we get the positional information around the TSS.
+
+
+```{r promoter_data, eval=TRUE, echo=FALSE, include=TRUE}
+library(rtracklayer)
+library(genomation)
+genes = import.gff('./Data/hg38_EnsemblGenes.chr21.gtf.gz')
+genes = subset(genes, type == 'gene')
+prom  = promoters(genes, 5000, 5000)
+
+bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
+bed_files = bed_files[grepl('bed', bed_files)]
+wgbs = lapply(bed_files, rtracklayer::import.bed)
+names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
+```
+
+
+### **Exercise:**
+##### Plot the methylation profiles around the transcription start sites
+
+Extract the signal from the methylation files into 25 bins, and plot
+the resulting signal using the plotMeta function.
+You will need to set the `strand.aware = TRUE` in `ScoreMatrixList`.
+
+### **Question:**
+
+```{r meth_ex_q3, echo=FALSE}
+question("What does the strand.aware = TRUE change?':",
+  answer("It extracts the profile only for ranges on the + strand"),
+  answer("It extracts the profile only for ranges on the - strand"),
+  answer("It flips the signal in ranges on the + strand around their midpoint"),
+  answer("It flips the signal in ranges on the - strand around their midpoint", correct=TRUE),
+  allow_retry = TRUE
+)
+```
+
+```{r vis_ex3, exercise=TRUE, exercise.setup = 'promoter_data'}
+
+```
+
+```{r vis_ex3-solution}
+# r variable - contains merged CTCF peaks from K562 and GM12878
+library(rtracklayer)
+library(genomation)
+genes = import.gff('./Data/hg38_EnsemblGenes.chr21.gtf.gz')
+genes = subset(genes, type == 'gene')
+prom  = promoters(genes, 5000, 5000)
+
+bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
+bed_files = bed_files[grepl('bed', bed_files)]
+wgbs = lapply(bed_files, rtracklayer::import.bed)
+names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
+
+sml = ScoreMatrixList(wgbs, prom, is.noCovNA = TRUE, bin.num = 15, weight.col = 'score', strand.aware=TRUE)
+plotMeta(sml)
+```
+
+We have previously seen that the GM12878 cell line has higher global methylation
+values than the K562 cell line. In order to make the profiles comparable, we will 
+scale the signal from each region and cell line. Scalling is a procedure whereby
+the signal in each region and sample is shifted relative to the average value in that region , and subsequently divided by the standard deviation.
+
+### **Exercise:**
+##### Use the `scaleScoreMatrixList` function, and plot the resulting profiles
+
+```{r vis_ex4, exercise=TRUE, exercise.setup = 'promoter_data'}
+
+```
+
+```{r vis_ex4-solution}
+# same as in the previous exercise
+library(rtracklayer)
+library(genomation)
+genes = import.gff('./Data/hg38_EnsemblGenes.chr21.gtf.gz')
+genes = subset(genes, type == 'gene')
+prom  = promoters(genes, 5000, 5000)
+
+bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
+bed_files = bed_files[grepl('bed', bed_files)]
+wgbs = lapply(bed_files, rtracklayer::import.bed)
+names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
+
+# signal scaling
+sml = ScoreMatrixList(wgbs, prom, is.noCovNA = TRUE, bin.num = 15, weight.col = 'score', strand.aware=TRUE)
+
+sml_scale = scaleScoreMatrixList(sml)
+plotMeta(sml_scale)
+```
+
+### Exercise:
+##### Visualize the methylation profiles using the `multiHeatMatrix` function
+
+
+Signal meta plots (as produced by the `plotMeta` function) show the average
+signal profile around the region of interest, but completely disregard the
+inherent variabillity in the data.
+To get around this we visualize the data as parallel heatmaps.
+
+```{r vis_ex5, exercise=TRUE, exercise.setup = 'promoter_data'}
+
+```
+
+
+```{r vis_ex5-solution}
+library(rtracklayer)
+library(genomation)
+genes = import.gff('./Data/hg38_EnsemblGenes.chr21.gtf.gz')
+genes = subset(genes, type == 'gene')
+prom  = promoters(genes, 5000, 5000)
+
+bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
+bed_files = bed_files[grepl('bed', bed_files)]
+wgbs = lapply(bed_files, rtracklayer::import.bed)
+names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
+
+sml = ScoreMatrixList(wgbs, prom, is.noCovNA = TRUE, bin.num = 15, weight.col = 'score', strand.aware=TRUE)
+multiHeatMatrix(sml)
+```
+
+### Exercise:
+#### Make the previous matrix look pretty
+
+Heatmap visualizations are quite sensitive to outliers (rare regions with extremely
+high signal values). And the ordering of the regions which are visualized.
+In the following exercise you will first scale the profiles and then, order them
+based on the signal intensity on the promoters.
+To scale the profiles use the `scaleScoreMatrixFunction`, and to order them use the
+`orderBy` function.
+`orderBy` function takes as input a **ScoreMatrixList**, and an integer vector
+which specifies the desired order of regions. We can sort the regions by 
+signal intensity using a combination of `rowMeans` and `order` functions.
+
+```{r vis_ex6, exercise=TRUE, exercise.setup = 'promoter_data'}
+
+```
+
+
+```{r vis_ex6-solution}
+library(rtracklayer)
+library(genomation)
+genes = import.gff('./Data/hg38_EnsemblGenes.chr21.gtf.gz')
+genes = subset(genes, type == 'gene')
+prom  = promoters(genes, 5000, 5000)
+
+bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
+bed_files = bed_files[grepl('bed', bed_files)]
+wgbs = lapply(bed_files, rtracklayer::import.bed)
+names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
+
+sml = ScoreMatrixList(wgbs, prom, is.noCovNA = TRUE, bin.num = 15, weight.col = 'score', strand.aware=TRUE)
+sml = scaleScoreMatrixList(sml)
+sml = orderBy(sml, order(-rowMeans(sml[[1]][,7:9], na.rm=TRUE)))
+multiHeatMatrix(sml, col=colorRampPalette(c('blue','white','red'))(50))
+```
+
+### **Advanced Exercise:** 
+#### Implement a custom scaling function which will omit the NA values.
+
+The default scaling function in the `scaleScoreMatrixList` does not know
+how to omit the **NA** values from the calculations. Implement a custom
+scaling function which will calculate the mean and standard deviation even
+if some positions contain **NA** values, and will subsequently replace the **NA** values with **0**.
+
+```{r vis_ex7, exercise=TRUE, exercise.setup = 'promoter_data'}
+
+```
+
+
+```{r vis_ex7-solution}
+# data loading
+library(rtracklayer)
+library(genomation)
+genes = import.gff('./Data/hg38_EnsemblGenes.chr21.gtf.gz')
+genes = subset(genes, type == 'gene')
+prom  = promoters(genes, 5000, 5000)
+
+bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
+bed_files = bed_files[grepl('bed', bed_files)]
+wgbs = lapply(bed_files, rtracklayer::import.bed)
+names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
+
+# custom scaling function
+NArobust_scalefun = function(x){
+
+    m = mean(x, na.rm=TRUE)
+    s = sd(x, na.rm=TRUE)
+    x = (x - m)/s
+    x[is.na(x)] = 0
+    x
+}
+
+# signal extraction and plotting
+sml = ScoreMatrixList(wgbs, prom, is.noCovNA = TRUE, bin.num = 15, weight.col = 'score', strand.aware=TRUE)
+sml = scaleScoreMatrixList(sml, scalefun = NArobust_scalefun)
+sml = orderBy(sml, order(-rowMeans(sml[[1]][,7:9], na.rm=TRUE)))
+multiHeatMatrix(sml, col=colorRampPalette(c('blue','white','red'))(50))
+```
+
+
+-----
+
+## Final Assignment
+
+For the final assignment switch to RStudio. Open a new R notebook and solve the
+following exercises:
+
+1. What is the distribution of CTCF ChIP peaks from K562 lines in following genomic regions:
+**tss -> exons -> introns -> intergenic regions**.
+
+    1.1. Advanced - repeat the exercise for all peaks in the **./Data/CTCF** folder.
+    Does the distribution of peaks change in different cell lines?
+
+2. Draw a co-occurance matrix of all ChIP-seq experiments. 
+Firstly you will need
+to decied how to quantify the overlap between the different ChIP-seq experiments.
+One common distance measure is the [Jaccard index](https://en.wikipedia.org/wiki/Jaccard_index).
+Once you have decidd on the distance measure, calculate the pairwise distance between
+all ChIP-seq experiments, and plot the results using `ComplexHeatmap`
+The files can be found in **./Data/Peaks**
+
+
+3. Take top 5 transcription factors which overlap with CTCF and draw heatmaps
+of the signal profiles.
+From the previous exercise extract the top 5 transcription factors which co-localize
+with CTCF. Go to the [ENCODE website](https://www.encodeproject.org/matrix/?type=Experiment).
+Find the ChIP experiments that correspond to the 5 transcripton factors (in the K562 cell line), 
+and download the bigWig files.
+Visualize the signal profiles in a region of +/- 2kb around the CTCF peaks.
+

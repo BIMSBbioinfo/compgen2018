@@ -433,7 +433,7 @@ m=methRead("~/Downloads/GSM919982_NBM_1_myCpG.txt.gz",sample.id = "idh",assembly
 ### Exercise 2
 The main objective of this exercise is to learn how to do methylome segmentation and the downstream analysis for annotation and data integration.
 
-- Download the human embryonic stem-cell methylation bigWig files from [Roadmap Epigenomics website](http://egg2.wustl.edu/roadmap/web_portal/processed_data.html#MethylData). It may take a while to understand how the website is structured and which bigWig file to use. That is part of the exercise.
+- Download the human embryonic stem-cell (H1 Cell Line) methylation bigWig files from [Roadmap Epigenomics website](http://egg2.wustl.edu/roadmap/web_portal/processed_data.html#MethylData). It may take a while to understand how the website is structured and which bigWig file to use. That is part of the exercise.
 - Do segmentation on hESC methylome. you can only do chr1 if it takes too much time. 
 - Annotate segments, what kind of genomic features each segment class overlaps with.
 - For each segment type, plot -/+ 2kb around the mid-point of the segment average H3K4me3, H3K4me1, H3K27ac, p300 Chip-seq data sets avaiable at ENCODE and Roadmap Epigenome database.

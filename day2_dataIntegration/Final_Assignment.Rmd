@@ -1,0 +1,272 @@
+---
+title: "R Final_Assignment"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
+  html_notebook:
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo      = TRUE,
+                      cache     = FALSE,
+                      message   = FALSE, 
+                      error     = FALSE,
+                      highlight = TRUE)
+
+```
+
+# Exercise 1.
+
+What is the distribution of CTCF ChIP peaks from K562 
+lines in following genomic regions: tss -> exons -> introns -> intergenic regions.
+
+Load the packages
+```{r}
+library(genomation)
+library(rtracklayer)
+library(GenomicRanges)
+```
+
+Load the files
+```{r}
+ctcf = readGeneric('Data/CTCF_K562_hg38.chr21.bed', zero.based=TRUE)
+
+gtf = import.gff('./Data/hg38_EnsemblGenes.chr21.gtf.gz')
+```
+
+Construct the annotation
+```{r}
+tss    = promoters(subset(gtf, type=='gene'), 1000, 1000)
+exon   = subset(gtf, type=='exon')
+intron = subset(gtf, type=='gene')
+annotation_list = list(tss = tss, exon=exon, intron=intron)
+annotation_list = GRangesList(annotation_list)
+```
+
+Find the overlaps between the annotation and peaks
+```{r}
+ovlaps = as.data.frame(findOverlaps(ctcf, annotation_list))
+ovlaps$annotation = names(annotation_list)[ovlaps$subjectHits]
+ovlaps = ovlaps[order(ovlaps$subjectHits),]
+ovlaps = ovlaps[!duplicated(ovlaps$queryHits),]
+```
+
+Creates the annotation vector and outputs the statistics
+```{r}
+annot_vector = rep('intergenic', length(ctcf))
+annot_vector[ovlaps$queryHits] = ovlaps$annotation
+table(annot_vector)
+```
+
+
+# Exercise 2.
+
+### Load the libraries
+```{r}
+library(genomation)
+library(GenomicRanges)
+library(dplyr)
+library(ggplot2)
+library(ComplexHeatmap)
+```
+
+
+
+### load the data
+```{r}
+chip.files = list.files('./Data/ChIP', full.names=TRUE)
+
+lchip = lapply(chip.files, readGeneric, zero.based=TRUE)
+lnams = basename(chip.files)
+lnams = sub('_GRCh38.bed.gz','',lnams)
+lnams = sub('K562_','',lnams)
+names(lchip) = lnams
+lchip = GRangesList(lchip)
+```
+
+### some samples have duplicated peaks and we need to collapse them
+```{r}
+lchip = reduce(lchip)
+```
+
+
+### some samples have "werid" peak size distributions
+```{r}
+uchip = unlist(lchip)
+data.frame(sample = names(uchip), width = width(uchip)) %>%
+    mutate(MAX = case_when(
+        sample == 'MAX' ~ 'MAX',
+        sample == 'TAL1' ~ 'TAL1',
+        sample == 'FOXA1' ~ 'FOXA1',
+        sample == 'ZNF639' ~ 'ZNF639',
+        TRUE ~ 'Other'
+        )) %>%
+    ggplot(aes(width, color=MAX)) +
+    geom_density(size=1) +
+    scale_color_manual(values=c('darkorange','darkorange1','black','darkorange2','darkorange3','darkorange4')) +
+    scale_x_log10() +
+    theme_bw()
+```
+
+We'll throw them out
+```{r}
+lchip = lchip[!names(lchip) %in% c('MAX','TAL1','FOXA1','ZNF639')]
+uchip = unlist(lchip)
+```
+
+### intersection calculation
+```{r}
+ovlap      = as.data.frame(findOverlaps(uchip, lchip))
+ovlap$set1 = names(uchip)[ovlap$queryHits]
+ovlap$set2 = names(lchip)[ovlap$subjectHits]
+inter      = ovlap %>%
+    group_by(set1, set2) %>%
+    summarize(intersection = length(unique(queryHits))) 
+inter$key = with(inter, paste(set1, set2))
+```
+
+### union cakculation
+```{r}
+union            = expand.grid(seq(lchip), seq(lchip))
+union$set1       = names(lchip)[union$Var1]
+union$set2       = names(lchip)[union$Var2]
+union$length1    = elementNROWS(lchip)[union$Var1]
+union$length2    = elementNROWS(lchip)[union$Var2]
+union$sum_length = with(union, (length1 + length2))
+union$key = with(union, paste(set1, set2))
+union = union[,-c(1:4)]
+```
+
+### merge intersection and union tables
+```{r}
+dist = merge(inter, union, by='key')
+```
+
+
+### calculates the percentage of overlap for each TF - TF combination
+```{r}
+dist$perc  = with(dist, round(intersection/length1,2))
+```
+
+### calculates the union
+```{r}
+dist$union = with(dist, sum_length - intersection)
+```
+
+### calculates the approximation to the Jaccard index
+```{r}
+dist$jacc  = with(dist, intersection/union)
+```
+
+### Plots the approximate jaccard index
+
+Because the peak overlap is not a symmetric measure, we 
+average the approximate jaccard index between TFA - TFB, and TFB - TFA
+```{r fig.width = 60, fig.height=60}
+mat.jacc = data.table::dcast(dist, set1~set2, value.var='jacc',fill=0) %>%
+    mutate(set1 = NULL) 
+rownames(mat.jacc) = colnames(mat.jacc)
+mat.jacc = (mat.jacc + t(mat.jacc))/2
+
+Heatmap(mat.jacc, col=circlize::colorRamp2(breaks = c(0,1),colors=c('white','red')))
+```
+
+### Plots the average percent of overlaps
+
+Because the **percentage of overlap** is not a symmetric measure, we 
+average the approximate jaccard index between TFA - TFB, and TFB - TFA
+```{r fig.width = 60, fig.height=60}
+mat.perc = data.table::dcast(dist, set1~set2, value.var='perc',fill=0) %>%
+    mutate(set1 = NULL) 
+rownames(mat.perc) = colnames(mat.perc)
+mat.perc = (mat.perc + t(mat.perc))/2
+
+Heatmap(mat.perc, col=circlize::colorRamp2(breaks = c(0,1),colors=c('white','red')))
+```
+
+
+## Exact Jaccard similarity
+
+### Jaccard similarity function
+The following function calculates the exact Jaccard Similarity between
+two sets of regions.
+The function takes a GRangesList, and calculates the **per base**
+intersection, and union between each pair of transcription factor
+ranges.
+
+**max_n** parameter defines the number of transcription factors we want to consider.
+
+Because the function needs to calculate the all pairwise combinations
+between the transcription factor, it takes a bit of time to run.
+
+```{r, message=FALSE, error=FALSE}
+PairwiseJaccard = function(
+    lchip, 
+    max_n = min(150, length(lchip))
+){
+    
+    uchip = unlist(lchip)
+    ### takes all transcription factors and finds disjoint segments
+    d     = disjoin(uchip)
+    
+    ### annotates the disjoint segments based on which TF set they belong to
+    dd    = data.frame(lapply(lchip[1:max_n], function(x)countOverlaps(d, x)>0))
+    w     = width(d)
+    
+    ### calculates the intersection between the sets
+    ### by taking disjoint regions which overlap pairs of transcription factors
+    ls = lapply(head(seq(dd),-1), function(x){
+        lapply(seq(x+1, ncol(dd)), function(y){
+            message(paste(x,y))
+            sum(w[dd[,x] & dd[,y]])
+        })
+    })
+    ls = lapply(ls, unlist)
+    
+    ### converts the calculated intersection scores into a matrix
+    intersect = matrix(0,ncol=max_n, nrow=max_n)
+    intersect[lower.tri(intersect)] = unlist(ls)
+    intersect = intersect + t(intersect)
+    
+    ### calculates the union between the sets
+    wl    = sum(width(lchip[1:max_n]))
+    union = outer(wl, wl, '+') - intersect
+
+    jacc = intersect/union
+    diag(jacc) = 1
+    round(jacc,2)
+}
+
+```
+
+### Test the function
+
+```{r}
+gr  = GRanges('chr1', IRanges(c(1,10), width=4))
+toy = GRangesList(gr, shift(gr,2), shift(gr, 4), shift(gr, 5))
+
+jacc = PairwiseJaccard(toy)
+```
+
+This seems ok
+
+```{r}
+jacc
+```
+
+
+### Calculate the Jaccard index between first 50 TFs
+
+```{r}
+tf_jacc = PairwiseJaccard(lchip, 50)
+```
+
+### Plots the matrix
+
+```{r fig.width = 25, fig.height=25}
+Heatmap(tf_jacc, col=circlize::colorRamp2(breaks = c(0,1),colors=c('white','red')))
+```

@@ -1,0 +1,164 @@
+---
+title: "Exercise R Notebook template"
+output: html_notebook
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you
+execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by
+placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+Rscript -e "rmarkdown::render('ExerciseReportTemplate.Rmd')"
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by
+pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be
+saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to
+preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor.
+Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead,
+the output of the chunk when it was last run in the editor is displayed.
+
+# Exercise 1
+
+## Importing and some filtering
+
+```{r}
+require(methylKit)
+
+# Read all files
+files <- as.list(Sys.glob("./data/GSM*.txt.gz"))
+ids <- lapply(files, function(x){
+                gsub('_myCpG.txt.gz', '', basename(x))
+})
+
+m <- methRead(files, sample.id = ids, assembly="hg18", treatment=c(0,0,1,1), context="CpG")
+
+getMethylationStats(m[[2]], plot=TRUE, both.strands=FALSE)
+
+m.filt <- filterByCoverage(m, lo.count=10, lo.perc=NULL,
+                                      hi.count=NULL, hi.perc=99.9)
+```
+
+## CpG filtering
+
+Since using only chr21, we decided not to be too stringent in the filtering.
+We check 3, 5, 10 and 20 standard deviations to see how much of the CpG we
+keep.
+
+```{r}
+lapply(m.filt, function(x){
+                    getMethylationStats(x, plot=TRUE, both.strands=FALSE)
+})
+meth <- unite(m.filt, destrand=FALSE)
+
+#Chrs <- c("chr1", "chr2")
+Chrs <- c("chr21")
+meth <- meth[meth$chr %in% Chrs,]
+head(meth)
+
+pm <- percMethylation(meth)
+mds <- matrixStats::rowSds(pm)
+hist(mds,col="cornflowerblue",xlab="Std. dev. per CpG")
+
+# Try different cutoffs to see
+sum(mds>3)
+sum(mds>5)
+sum(mds>10)
+sum(mds>20)
+```
+
+We used 5 as a cutoff.
+
+```{r}
+Stdev_cutoff <- 5
+meth <- meth[mds > Stdev_cutoff,]
+```
+
+## Some sanity checks
+
+```{r}
+getCorrelation(meth, plot=TRUE)
+
+clusterSamples(meth, dist="correlation", method="ward", plot=TRUE)
+
+PCASamples(meth)
+
+```
+
+## Differential methylation
+
+```{r}
+dm.lr <- calculateDiffMeth(meth, overdispersion = "MN", test ="Chisq")
+# get differentially methylated bases/regions with specific cutoffs
+all.diff <- getMethylDiff(dm.lr, difference=25, qvalue=0.01, type="all")
+
+cat("Number of hyper-methylated positions in the mutants\n")
+# get hyper-methylated
+hyper <- getMethylDiff(dm.lr, difference=25, qvalue=0.01, type="hyper")
+print(hyper)
+
+cat("Number of hypo-methylated positions in the mutants\n")
+# get hypo-methylated
+hypo <- getMethylDiff(dm.lr,difference=25, qvalue=0.01, type="hypo")
+print(hypo)
+
+myDiff25p <- getMethylDiff(dm.lr, difference=25, qvalue=0.01)
+```
+
+We observe a more hypermethylation in the mutants with respect to the
+controls than hypomethylation.
+
+## Annotation
+
+```{r}
+require("genomation")
+
+gene.obj <- readTranscriptFeatures(system.file("extdata", "refseq.hg18.bed.txt",
+                                           package = "methylKit"))
+cpg.obj <- readFeatureFlank(system.file("extdata", "cpgi.hg18.bed.txt",
+                                        package = "methylKit"),
+                           feature.flank.name=c("CpGi","shores"))
+
+diffAnn <- annotateWithGeneParts(as(myDiff25p, "GRanges"), gene.obj)
+
+diffCpGann <- annotateWithFeatureFlank(as(myDiff25p,"GRanges"),
+                                    cpg.obj$CpGi,cpg.obj$shores,
+                         feature.name="CpGi",flank.name="shores")
+
+plotTargetAnnotation(diffAnn,precedence=TRUE,
+    main="differential methylation annotation")
+plotTargetAnnotation(diffCpGann,precedence=TRUE,
+                     col=c("green","gray","white"),
+    main="differential methylation annotation")
+```
+
+## Finding nearest genes to differentially methylated Cs
+```{r}
+require("GenomicRanges")
+require("rtracklayer")
+gff <- import.gff("./data/Homo_sapiens.NCBI36.54.gtf.gz")
+seqlevels(gff) <- paste0('chr', seqlevels(gff))
+genes <- gff[nearest(as(myDiff25p, "GRanges"), gff, ignore.strand = TRUE),]
+print(unique(genes$gene_name))
+
+write.table(unique(genes$gene_id), file="genes.txt", quote=FALSE, row.names=F, col.names=FALSE)
+```
+
+After obtaining the gene ids for the most proximal genes, we used gprofiler online to
+run an enrichment analysis. The results are available via [this link](https://biit.cs.ut.ee/link/1do).
+
+
+
+

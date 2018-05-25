@@ -1,0 +1,171 @@
+---
+title: "CompGen 2018 exercises"
+output: html_notebook
+---
+
+#Download the data
+#Path is in ./Desktop/compgen2018/day3/diffMet/exercises
+
+
+
+
+
+
+```{r Reading data, echo=TRUE}
+library(methylKit)
+library(genomation)
+library(GenomicRanges)
+library(tidyverse)
+library(readr)
+library(dplyr)
+
+
+#Open files
+setwd("~/Desktop/compgen2018/day3_diffMeth/exercises")
+mydir<-getwd()
+files = list.files(pattern='*.myCpG.txt')
+files2 <-list()
+for (i in 1:length(files)) {
+  
+  newfilename<-paste(mydir, "/",files[i], sep="")
+  files2[i]<-newfilename
+}
+
+#Create object
+myobj=methRead(files2,
+           sample.id=list("NBM1","NBM2","IDH1","IDH2"),
+           assembly="hg18",
+           treatment=c(0,0,1,1),
+           context="CpG"
+           )
+
+# Check that the object has been imported
+# Check dimensions of the object
+length(myobj)
+
+#Check the top rows of the data to have an idea of the variables, etc
+head(myobj[[1]])
+
+#Check the distribution of the methylation data, usually is bimodal
+getMethylationStats(myobj[[2]],plot=TRUE,both.strands=FALSE)
+
+#Create a histogram of how covered are the bases
+getCoverageStats(myobj[[2]],plot=TRUE,both.strands=FALSE)
+
+
+#Sometimes you need to filter samples with very high coverage since it means PCR bias, not needed this time
+filtered.myobj=filterByCoverage(myobj,lo.count=10,lo.perc=NULL,
+                                      hi.count=NULL,hi.perc=99.9)
+
+#Merge all samples into 1 table
+meth=unite(myobj, destrand=FALSE)
+head(meth)
+
+#Filter CpGs that are not variable 
+pm=percMethylation(meth) # get percent methylation matrix
+mds=matrixStats::rowSds(pm) # calculate standard deviation of CpGs
+head(meth[mds>20,])
+
+
+#Cluster samples
+clusterSamples(meth, dist="correlation", method="ward", plot=TRUE)
+
+#
+pc=PCASamples(meth,obj.return = TRUE, adj.lim=c(1,1))
+```
+
+
+Calculate Differential methylation using Fischer's exact test
+
+```{r}
+
+#Calculate P-values for all bases or regions in the input methylBase object
+
+pooled.meth=pool(meth,sample.ids=c("IDH","NBM"))
+dm.pooledf=calculateDiffMeth(pooled.meth)
+
+# get differentially methylated bases/regions with specific cutoffs
+all.diff=getMethylDiff(dm.pooledf,difference=25,qvalue=0.01,type="all")
+
+# get hyper-methylated
+hyper=getMethylDiff(dm.pooledf,difference=25,qvalue=0.01,type="hyper")
+
+# get hypo-methylated
+hypo=getMethylDiff(dm.pooledf,difference=25,qvalue=0.01,type="hypo")
+
+#using [ ] notation
+hyper2=dm.pooledf[dm.pooledf$qvalue < 0.01 & dm.pooledf$meth.diff > 25,]
+
+```
+
+
+
+Logistic regression based tests
+
+```{r}
+dm.lr=calculateDiffMeth(meth,overdispersion = "MN",test ="Chisq")
+```
+
+Differential methylation for regions rather than base-pairs
+
+```{r}
+tiles=tileMethylCounts(myobj,win.size=1000,step.size=1000)
+head(tiles[[1]],3)
+```
+
+
+Download the BED file with annotation information
+From here:
+https://genome.ucsc.edu/cgi-bin/hgTables
+
+Select regions of interest: promoters, introns, exons
+
+```{r}
+library(methylKit)
+library(genomation)
+library(GenomicRanges)
+library(tidyverse)
+library(readr)
+library(dplyr)
+
+
+#Open files
+setwd("~/Desktop/compgen2018/day3_diffMeth/exercises")
+gene.obj=readTranscriptFeatures("hg18.txt")
+anotatedresults<-annotateWithGeneParts(as(all.diff,"GRanges"),gene.obj)
+
+genomation::plotTargetAnnotation(anotatedresults)
+
+
+```
+
+
+
+
+
+Select promoters, introns and exons
+
+```{r}
+library(methylKit)
+library(genomation)
+library(GenomicRanges)
+library(tidyverse)
+library(readr)
+library(dplyr)
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+

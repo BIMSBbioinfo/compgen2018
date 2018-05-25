@@ -27,6 +27,7 @@ suppressPackageStartupMessages(library(GenomicRanges))
 suppressPackageStartupMessages(library(rtracklayer))
 suppressPackageStartupMessages(library(genomation))
 suppressPackageStartupMessages(library(Gviz))
+tutorial_options(exercise.timelimit = 10000)
 axis = GenomeAxisTrack(GRanges('chr1', IRanges(1,20)), height=3)
 # tutorial_options(exercise.checker = checkr::check_for_learnr)
 ```
@@ -832,8 +833,9 @@ question("How many genes have CpG islands overlapping their promoters?",
 
 ```{r import_exercise_1-solution}
 library(genomation)
-g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
-g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+library(GenomicRanges)
+g_k562 = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
 
 r = reduce(c(g_k562, g_gm))
 r$k562 = countOverlaps(r, g_k562) > 0
@@ -848,7 +850,8 @@ question("How many peaks are specific to the k562 cell line?",
   answer("1520"),
   answer("1800"),
   answer("3441"),
-  answer("1174", correct=TRUE),
+  answer("2815", correct=TRUE),
+  answer("1174"),
   answer("626"),
   allow_retry = TRUE
 )
@@ -983,7 +986,7 @@ The same functions we used for comparing between ranges can be used on
 
 Let's create a toy dataset:
 
-```{r grglist_ovlap, echo=TRUE, eval=TRUE, include=TRUE}
+```{r echo=TRUE, eval=TRUE, include=TRUE}
 gr1 = GRanges('chr1', IRanges(start=c(10,22,30,11,21,31), width=3), 
              strand=c('+','+','+','-','-','-'))
 gr1
@@ -1095,7 +1098,7 @@ question("What king of object does coverage(g) return?",
 ### **Exercise**
 ##### Extract the first element of the **cov** object.
 
-```{r coverage_2_ex, exercise=TRUE}
+```{r coverage_2_ex, exercise=TRUE, exercise.setup='wig_1'}
 
 ```
 
@@ -1181,8 +1184,8 @@ You will need to:
 ```{r import_exercise_3-solution}
 library(genomation)
 library(rtracklayer)
-g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
-g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_k562 = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
 
 r = reduce(c(g_k562, g_gm))
 k562_ind = countOverlaps(r, g_k562) > 0
@@ -1226,8 +1229,8 @@ might be.
 ```{r import_exercise_4, exercise=TRUE}
 library(genomation)
 library(rtracklayer)
-g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
-g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_k562 = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
 
 r = reduce(c(g_k562, g_gm))
 k562_ind = countOverlaps(r, g_k562) > 0
@@ -1258,8 +1261,8 @@ with(fom, tapply(meth, class, mean))
 ```{r import_exercise_5-solution}
 library(genomation)
 library(rtracklayer)
-g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
-g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_k562 = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
 
 r = reduce(c(g_k562, g_gm))
 k562_ind = countOverlaps(r, g_k562) > 0
@@ -1270,7 +1273,7 @@ r$class[ k562_ind & !gm_ind] = 'k562'
 r$class[!k562_ind &  gm_ind] = 'gm'
 
 
-meth = import.bed('./Data/WGBS_K562_hg38.chr21.bed.gz')
+meth = readGeneric('./Data/WGBS_K562_hg38.chr21.bed.gz',zero.based=TRUE, meta.cols=list(score=11))
 fom  = as.data.frame(findOverlaps(r, meth))
 fom$meth  = meth$score[fom$subjectHits]
 fom$class = r$class[fom$queryHits]
@@ -1278,7 +1281,7 @@ fom$class = r$class[fom$queryHits]
 with(fom, tapply(meth, class, mean))
 ```
 
-**Hint:** import.bed from rtracklayer package
+**Hint:** readGeneric from the genomation package
 
 ### **Question:**
 
@@ -1321,8 +1324,8 @@ Firstly, we load and combine the CTCF peaks:
 ```{r combine_peaks, include=TRUE, echo=TRUE, eval=TRUE}
 library(genomation)
 library(GenomicRanges)
-g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
-g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_k562 = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
 
 r = reduce(c(g_k562, g_gm))
 k562_ind = countOverlaps(r, g_k562) > 0
@@ -1347,7 +1350,7 @@ scores using the **weight.col** parameter.
 ```
 
 ```{r, meth_ex1-solution}
-meth = import.bed('./Data/WGBS_K562_hg38.chr21.bed.gz')
+meth = readGeneric('./Data/WGBS_K562_hg38.chr21.bed.gz',zero.based=TRUE, meta.cols=list(score=11))
 r$meth_score = ScoreMatrixBin(meth, r,
                               is.noCovNA = TRUE, bin.num = 1, weight.col = 'score')
 
@@ -1375,8 +1378,8 @@ Do not forget about **is.noCovNA** and **weight.col**
 ```{r vis_ex1-solution}
 library(genomation)
 library(GenomicRanges)
-g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
-g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_k562 = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
 
 r = reduce(c(g_k562, g_gm))
 k562_ind = countOverlaps(r, g_k562) > 0
@@ -1388,7 +1391,7 @@ r$class[!k562_ind &  gm_ind] = 'gm'
 
 bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
 bed_files = bed_files[grepl('bed', bed_files)]
-wgbs = lapply(bed_files, rtracklayer::import.bed)
+wgbs = lapply(bed_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
 
 sml = ScoreMatrixList(wgbs, r, is.noCovNA = TRUE, bin.num = 1, weight.col = 'score')
@@ -1411,8 +1414,8 @@ library(genomation)
 library(rtracklayer)
 
 
-g_k562 = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
-g_gm   = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_k562 = readGeneric('./Data/CTCF_K562_hg38.chr21.bed')
+g_gm   = readGeneric('./Data/CTCF_GM12878_hg38.chr21.bed')
 
 r = reduce(c(g_k562, g_gm))
 k562_ind = countOverlaps(r, g_k562) > 0
@@ -1425,7 +1428,7 @@ r$class[!k562_ind &  gm_ind] = 'gm'
 # imports methylation
 bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
 bed_files = bed_files[grepl('bed', bed_files)]
-wgbs = lapply(bed_files, rtracklayer::import.bed)
+wgbs = lapply(bed_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
 
 sml = ScoreMatrixList(wgbs, r, is.noCovNA = TRUE, bin.num = 1, weight.col = 'score')
@@ -1446,7 +1449,7 @@ ggplot(dat, aes(WGBS_GM12878, WGBS_K562, color=r.class)) +
 # imports methylation
 bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
 bed_files = bed_files[grepl('bed', bed_files)]
-wgbs = lapply(bed_files, rtracklayer::import.bed)
+wgbs = lapply(bed_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
 
 sml = ScoreMatrixList(wgbs, r, is.noCovNA = TRUE, bin.num = 1, weight.col = 'score')
@@ -1496,7 +1499,7 @@ ctcf_reduced = reduce(unlist(ctcf_list))
 
 # reads in the methylation files - this might take a minute or two
 meth_files = list.files('./Data/Meth', full.names=TRUE)
-meth_list  = lapply(meth_files, import.bed)
+meth_list = lapply(meth_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(meth_list) = sub('_WGBS_GRCh38.bed.gz','',basename(meth_files))
 
 # extracts the methylation scores
@@ -1533,7 +1536,7 @@ prom  = promoters(genes, 5000, 5000)
 
 bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
 bed_files = bed_files[grepl('bed', bed_files)]
-wgbs = lapply(bed_files, rtracklayer::import.bed)
+wgbs      = lapply(bed_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
 ```
 
@@ -1571,7 +1574,7 @@ prom  = promoters(genes, 5000, 5000)
 
 bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
 bed_files = bed_files[grepl('bed', bed_files)]
-wgbs = lapply(bed_files, rtracklayer::import.bed)
+wgbs = lapply(bed_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
 
 sml = ScoreMatrixList(wgbs, prom, is.noCovNA = TRUE, bin.num = 15, weight.col = 'score', strand.aware=TRUE)
@@ -1600,7 +1603,7 @@ prom  = promoters(genes, 5000, 5000)
 
 bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
 bed_files = bed_files[grepl('bed', bed_files)]
-wgbs = lapply(bed_files, rtracklayer::import.bed)
+wgbs      = lapply(bed_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
 
 # signal scaling
@@ -1633,7 +1636,7 @@ prom  = promoters(genes, 5000, 5000)
 
 bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
 bed_files = bed_files[grepl('bed', bed_files)]
-wgbs = lapply(bed_files, rtracklayer::import.bed)
+wgbs      = lapply(bed_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
 
 sml = ScoreMatrixList(wgbs, prom, is.noCovNA = TRUE, bin.num = 15, weight.col = 'score', strand.aware=TRUE)
@@ -1667,7 +1670,7 @@ prom  = promoters(genes, 5000, 5000)
 
 bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
 bed_files = bed_files[grepl('bed', bed_files)]
-wgbs = lapply(bed_files, rtracklayer::import.bed)
+wgbs      = lapply(bed_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
 
 sml = ScoreMatrixList(wgbs, prom, is.noCovNA = TRUE, bin.num = 15, weight.col = 'score', strand.aware=TRUE)
@@ -1699,7 +1702,7 @@ prom  = promoters(genes, 5000, 5000)
 
 bed_files = list.files('./Data', pattern='WGBS', full.names=TRUE)
 bed_files = bed_files[grepl('bed', bed_files)]
-wgbs = lapply(bed_files, rtracklayer::import.bed)
+wgbs      = lapply(bed_files, function(x)readGeneric(x,zero.based=TRUE, meta.cols=list(score=11)))
 names(wgbs) = sub('_hg38.chr21.bed.gz','', basename(bed_files))
 
 # custom scaling function

@@ -1,0 +1,118 @@
+---
+title: "Exercise 1 Team 0"
+output: html_notebook
+---
+
+# task1:
+Download methylation call files from GEO. These files are readable by methlKit using default methRead arguments.
+
+```{r}
+download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919990&format=file&file=GSM919990%5FIDH%2Dmut%5F1%5FmyCpG%2Etxt%2Egz",
+              destfile = "IDH1_rep1.cpg.txt")
+download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919991&format=file&file=GSM919991%5FIDH%5Fmut%5F2%5FmyCpG%2Etxt%2Egz",
+              destfile = "IDH1_rep2.cpg.txt")
+
+download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919982&format=file&file=GSM919982%5FNBM%5F1%5FmyCpG%2Etxt%2Egz",
+              destfile = "NBM_rep1.cpg.txt")
+
+download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM919984&format=file&file=GSM919984%5FNBM%5F2%5FRep1%5FmyCpG%2Etxt%2Egz",
+              destfile = "NBM_rep2.cpg.txt")
+
+```
+
+read files as methylKit objects
+```{r}
+library(methylKit)
+file.list=list("IDH1_rep1.cpg.txt.gz","IDH1_rep2.cpg.txt.gz",
+               "NBM_rep1.cpg.txt.gz","NBM_rep2.cpg.txt.gz")
+myobj=methRead(file.list,
+           sample.id=list("idh1","idh2","nbm1","nbm2"),
+           assembly="hg18",
+           treatment=c(1,1,0,0),
+           context="CpG"
+           )
+```
+
+# task 2
+Find differentially methylated cytosines. Use chr1 and chr2 only if you need to save time. You can subset it after you download the files either in R or unix. The files are for hg18 assembly of human genome.
+
+first use `unite()` then do differential methylation
+```{r}
+meth=unite(myobj, destrand=FALSE)
+# subset for chr1
+meth=meth[meth$chr == "chr1",]
+dm.lr=calculateDiffMeth(meth,overdispersion = "MN",test ="Chisq")
+
+```
+
+let's see what is in the object
+```{r}
+head(dm.lr)
+```
+
+
+
+
+# task 3
+Describe the differential methylation trend, what is the main effect ? 
+Most of the differential methylation is hyper-methylation compared to bone marrows
+```{r}
+diffs=getMethylDiff(dm.lr,qvalue = 0.01,difference = 10)
+dim(diffs)
+hist(diffs$meth.diff,breaks=50)
+```
+
+There are many different ways to visualize this, volcano plots, ideograms etc.
+
+# task 4
+Annotate differentially methylated cytosines (DMCs) promoter/intron/exon ?
+Downloaded hg18 refseq BED file UCSC genome browsers.
+
+```{r,echo=TRUE}
+library(genomation)
+genes=readTranscriptFeatures("refseq.hg18.bed")
+annot=annotateWithGeneParts(as(diffs,"GRanges"),genes)
+
+
+# we want to use genomation function plotTargetAnnotation
+genomation::plotTargetAnnotation(annot)
+```
+
+# task 5
+Which genes are the nearest to DMCs ? Can you do gene set analysis either in R or via web-based tools ?
+
+There are a million ways to do this.  One easy way is getting nearest TSS via genomation/methylKit functions and pasting the gene names to gprofiler or david web-app.
+
+Now, using genomation function `getAssociationWithTSS()` we can get the nearest TSS for each differentially methylated CpG.
+```{r}
+###
+TSSasoc=getAssociationWithTSS(annot)
+
+# gene names for each DMC
+head(unique(TSSasoc$feature.name))
+```
+
+If we have the gene names we have a bunch of options, let's try [gProfileR](https://cran.r-project.org/web/packages/gProfileR/)  package which is an R interface to [g:Profiler](https://biit.cs.ut.ee/gprofiler/) web app.
+```{r}
+library(gProfileR)
+res=gprofiler(query=unique(TSSasoc$feature.name), 
+          organism = "hsapiens")
+
+res[res$significant==TRUE,c(3,9,10,12)]
+```
+
+Even an easier way is to use, rGREAT package. This first associates DMCs to genes and runs gene set analysis. This is an interface to [GREAT](http://great.stanford.edu) web app.
+```{r}
+library(rGREAT)
+bed=getData(diffs)[,1:3]
+job = submitGreatJob(bed,species = "hg18",version="2.0.2")
+tb = getEnrichmentTables(job,category="Pathway Data")
+names(tb)
+
+tb[[1]][1:2, ]
+```
+
+
+
+
+
